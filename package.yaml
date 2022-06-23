@@ -1,0 +1,113 @@
+name:                personal-website
+version:             0.1.0.0
+github:              "githubuser/personal-website"
+license:             BSD3
+author:              "Author name here"
+maintainer:          "example@example.com"
+copyright:           "2022 Author name here"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/personal-website#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- aeson
+- blaze-html
+- blaze-markup
+- capability
+- clay
+- http-types
+- katip
+- katip-wai
+- mtl
+- optics
+- pandoc
+- relude
+- servant
+- servant-blaze
+- servant-server
+- skylighting
+- time
+- unliftio
+- wai
+- warp
+- yaml
+
+default-extensions:
+- Arrows
+- BangPatterns
+- DataKinds
+- DefaultSignatures
+- DeriveGeneric
+- DerivingVia
+- DuplicateRecordFields
+- FlexibleContexts
+- FlexibleInstances
+- GADTs
+- GeneralizedNewtypeDeriving
+- LambdaCase
+- MultiParamTypeClasses
+- MultiWayIf
+- NoImplicitPrelude
+- OverloadedLabels
+- OverloadedStrings
+- PolyKinds
+- KindSignatures
+- ConstraintKinds
+- QuantifiedConstraints
+- QuasiQuotes
+- RankNTypes
+- ScopedTypeVariables
+- StandaloneDeriving 
+- TemplateHaskell
+- TupleSections
+- TypeApplications
+- TypeFamilies
+- TypeOperators
+- UndecidableInstances
+
+ghc-options:
+- -Wall
+- -Werror
+- -Wcompat
+- -Widentities
+- -Wincomplete-uni-patterns
+- -Wpartial-fields
+- -Wredundant-constraints 
+
+library:
+  source-dirs: src
+
+executables:
+  personal-website-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - personal-website
+
+tests:
+  personal-website-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - personal-website
+
+
