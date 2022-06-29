@@ -1,0 +1,13 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "personal-website:lib"
+
+    - path: "./app/Main.hs"
+      component: "personal-website:exe:personal-website-exe"
+
+    - path: "./app/Paths_personal_website.hs"
+      component: "personal-website:exe:personal-website-exe"
+
+    - path: "./test"
+      component: "personal-website:test:personal-website-test"

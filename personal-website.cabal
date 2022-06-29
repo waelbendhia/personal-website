@@ -29,10 +29,15 @@ library
       PersonalWebsite.API
       PersonalWebsite.API.Container
       PersonalWebsite.API.CSS
-      PersonalWebsite.BlogRepo
-      PersonalWebsite.Markdown
+      PersonalWebsite.Blog
+      PersonalWebsite.Capabilities
+      PersonalWebsite.Colors
+      PersonalWebsite.Cookies
       PersonalWebsite.Monad
       PersonalWebsite.Nord
+      PersonalWebsite.Pages.Blog
+      PersonalWebsite.Pages.Home
+      PersonalWebsite.Strategies
   other-modules:
       Paths_personal_website
   hs-source-dirs:
@@ -77,11 +82,13 @@ library
     , blaze-markup
     , capability
     , clay
+    , cookie
     , http-types
     , katip
     , katip-wai
     , mtl
     , optics
+    , optparse-applicative
     , pandoc
     , relude
     , servant
@@ -141,11 +148,13 @@ executable personal-website-exe
     , blaze-markup
     , capability
     , clay
+    , cookie
     , http-types
     , katip
     , katip-wai
     , mtl
     , optics
+    , optparse-applicative
     , pandoc
     , personal-website
     , relude
@@ -207,11 +216,13 @@ test-suite personal-website-test
     , blaze-markup
     , capability
     , clay
+    , cookie
     , http-types
     , katip
     , katip-wai
     , mtl
     , optics
+    , optparse-applicative
     , pandoc
     , personal-website
     , relude

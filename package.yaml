@@ -26,10 +26,12 @@ dependencies:
 - blaze-markup
 - capability
 - clay
+- cookie
 - http-types
 - katip
 - katip-wai
 - mtl
+- optparse-applicative
 - optics
 - pandoc
 - relude
