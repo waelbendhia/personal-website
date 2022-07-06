@@ -27,17 +27,30 @@ library
   exposed-modules:
       Application
       PersonalWebsite.API
-      PersonalWebsite.API.Container
       PersonalWebsite.API.CSS
-      PersonalWebsite.Blog
-      PersonalWebsite.Capabilities
+      PersonalWebsite.Blogs
+      PersonalWebsite.Blogs.API
+      PersonalWebsite.Blogs.Capabilities
+      PersonalWebsite.Blogs.Data
+      PersonalWebsite.Blogs.Pages
       PersonalWebsite.Colors
+      PersonalWebsite.Colors.API
+      PersonalWebsite.Colors.CodeStyle
+      PersonalWebsite.Colors.Conversion
+      PersonalWebsite.Colors.Palette
+      PersonalWebsite.Colors.RandomGen
       PersonalWebsite.Cookies
+      PersonalWebsite.CSS.Parser
+      PersonalWebsite.Home
+      PersonalWebsite.Home.Pages
+      PersonalWebsite.Internal
       PersonalWebsite.Monad
-      PersonalWebsite.Nord
-      PersonalWebsite.Pages.Blog
-      PersonalWebsite.Pages.Home
+      PersonalWebsite.Pages
+      PersonalWebsite.Pages.Container
+      PersonalWebsite.Random
       PersonalWebsite.Strategies
+      PersonalWebsite.Toys
+      PersonalWebsite.Toys.PaletteGenerator
   other-modules:
       Paths_personal_website
   hs-source-dirs:
@@ -77,12 +90,15 @@ library
   ghc-options: -Wall -Werror -Wcompat -Widentities -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
   build-depends:
       aeson
+    , attoparsec
     , base >=4.7 && <5
     , blaze-html
     , blaze-markup
     , capability
     , clay
     , cookie
+    , file-embed
+    , http-api-data
     , http-types
     , katip
     , katip-wai
@@ -90,11 +106,13 @@ library
     , optics
     , optparse-applicative
     , pandoc
+    , random
     , relude
     , servant
     , servant-blaze
     , servant-server
     , skylighting
+    , text
     , time
     , unliftio
     , wai
@@ -143,12 +161,15 @@ executable personal-website-exe
   ghc-options: -Wall -Werror -Wcompat -Widentities -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
+    , attoparsec
     , base >=4.7 && <5
     , blaze-html
     , blaze-markup
     , capability
     , clay
     , cookie
+    , file-embed
+    , http-api-data
     , http-types
     , katip
     , katip-wai
@@ -157,11 +178,13 @@ executable personal-website-exe
     , optparse-applicative
     , pandoc
     , personal-website
+    , random
     , relude
     , servant
     , servant-blaze
     , servant-server
     , skylighting
+    , text
     , time
     , unliftio
     , wai
@@ -211,12 +234,15 @@ test-suite personal-website-test
   ghc-options: -Wall -Werror -Wcompat -Widentities -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
+    , attoparsec
     , base >=4.7 && <5
     , blaze-html
     , blaze-markup
     , capability
     , clay
     , cookie
+    , file-embed
+    , http-api-data
     , http-types
     , katip
     , katip-wai
@@ -225,11 +251,13 @@ test-suite personal-website-test
     , optparse-applicative
     , pandoc
     , personal-website
+    , random
     , relude
     , servant
     , servant-blaze
     , servant-server
     , skylighting
+    , text
     , time
     , unliftio
     , wai

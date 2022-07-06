@@ -22,11 +22,14 @@ description:         Please see the README on GitHub at <https://github.com/gith
 dependencies:
 - base >= 4.7 && < 5
 - aeson
+- attoparsec
 - blaze-html
 - blaze-markup
 - capability
 - clay
 - cookie
+- http-api-data
+- file-embed
 - http-types
 - katip
 - katip-wai
@@ -34,11 +37,13 @@ dependencies:
 - optparse-applicative
 - optics
 - pandoc
+- random
 - relude
 - servant
 - servant-blaze
 - servant-server
 - skylighting
+- text
 - time
 - unliftio
 - wai

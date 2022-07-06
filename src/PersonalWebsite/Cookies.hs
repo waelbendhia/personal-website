@@ -1,18 +1,18 @@
 module PersonalWebsite.Cookies (SessionData (..)) where
 
-import qualified Data.Text as T
-import PersonalWebsite.Colors
 import Relude
 import Servant
 import Web.Cookie
 
-newtype SessionData = SessionData {mode :: ColorMode}
+newtype SessionData = SessionData {seed :: Int}
 
 parseFromText :: Text -> Either Text SessionData
-parseFromText t = case T.toLower t of
-    "dark" -> pure $ SessionData Dark
-    "light" -> pure $ SessionData Light
-    x -> Left $ "invalid color mode " <> x
+parseFromText t =
+    SessionData
+        <$> maybe
+            (Left $ "invalid color mode " <> t)
+            Right
+            (readMaybe (toString t))
 
 instance FromHttpApiData SessionData where
     parseHeader v = do

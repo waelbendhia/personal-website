@@ -10,8 +10,7 @@ import Capability.Reader
 import Capability.Source
 import qualified Control.Monad.Except as MTL
 import Katip
-import PersonalWebsite.Capabilities
-import PersonalWebsite.Colors
+import PersonalWebsite.Blogs
 import PersonalWebsite.Strategies
 import Relude hiding (MonadReader, ask, local)
 import Servant.Server
@@ -22,7 +21,7 @@ data AppContext = AppContext
     { logEnv :: !LogEnv
     , logContexts :: !LogContexts
     , logNamespace :: !Namespace
-    , colorMode :: !ColorMode
+    , colorSeed :: !Int
     }
     deriving (Generic)
 
@@ -49,8 +48,8 @@ newtype AppMonad a = AppMonad {runAppMonad :: AppContext -> IO (Either AppError 
         (HasSource "logNamespace" Namespace, HasReader "logNamespace" Namespace)
         via Field "logNamespace" () AppMonad
     deriving
-        (HasSource "colorMode" ColorMode, HasReader "colorMode" ColorMode)
-        via Field "colorMode" () AppMonad
+        (HasSource "colorSeed" Int, HasReader "colorSeed" Int)
+        via Field "colorSeed" () AppMonad
     deriving (HasBlogRepo, HasSource "tags" [Text]) via (BlogRepoFromFolder AppMonad)
     deriving
         ( HasThrow "app" AppError
@@ -89,7 +88,7 @@ withAppMonad m = withLogEnv $ \le ->
             { logEnv = le
             , logContexts = mempty
             , logNamespace = "PersonalWebsite"
-            , colorMode = Dark
+            , colorSeed = 0
             }
 
 instance Katip AppMonad where

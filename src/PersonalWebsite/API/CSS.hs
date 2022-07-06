@@ -66,9 +66,27 @@ codeStyle = do
         | otherwise =
             "\"calt\" 1"
 
-mkBlogStyle :: (HasReader "colorMode" ColorMode m) => m Css
+mkToysStyle :: (HasReader "colorSeed" Int m) => m Css
+mkToysStyle = do
+    Palette{fg1, fg2, primary} <- askColorPalette
+    pure $ do
+        a ? ".single-toy" & do
+            display block
+            maxWidth (px 768)
+            sequence_ $ [marginLeft, marginRight] ?? auto
+            sequence_ $ [paddingRight, paddingLeft] ?? px 16
+            transition "all" (ms 150) ease (ms 150)
+            border (px 2) solid fg2
+            color fg1
+            background $ setTransparency 0.4 fg2
+            ":hover" & do
+                color fg1
+                borderColor primary
+                background $ setTransparency 0.4 primary
+
+mkBlogStyle :: HasReader "colorSeed" Int m => m Css
 mkBlogStyle = do
-    Palette{bg, fg2, highlight} <- getColorPalette
+    Palette{bg, fg2, highlight} <- askColorPalette
     pure $ do
         a <> (".tag-header" ** ".tag") ? monospaceFont
         (".tag-header" ** ".tag") ? color highlight
@@ -126,14 +144,33 @@ tagsStyle =
         "gap" -: "16px"
         "flex-wrap" -: "wrap"
 
-mkBaseStyle :: HasReader "colorMode" ColorMode m => m Css
+mkBaseStyle :: HasReader "colorSeed" Int m => m Css
 mkBaseStyle = do
-    Palette{bg, fg1, fg2, primary} <- getColorPalette
+    Palette{bg, fg1, fg2, primary} <- askColorPalette
     blogStyle <- mkBlogStyle
+    toysStyle <- mkToysStyle
     pure $ do
+        color fg1
         blogStyle
+        toysStyle
         codeStyle
         tagsStyle
+        input ? ".no-display" & display none
+        "input[type=text]" ? paddingLeft (px 12)
+        "input[type=submit]" ? ":hover" & do
+            color primary
+            borderBottomColor primary
+            cursor pointer
+            transition "all" (ms 150) ease (ms 150)
+        input <? do
+            serifFont
+            "border" -: "none"
+            "background" -: "none"
+            height (px 48)
+            color fg2
+            fontSize (px 18)
+            fontWeight (weight 400)
+            borderBottom (px 4) solid fg2
         ".lost" <> ".empty" <? do
             paddingTop (px 64)
             paddingBottom (px 64)
@@ -169,15 +206,7 @@ mkBaseStyle = do
                 form <? do
                     margin (px 0) (px 0) (px 0) (px 0)
                     height (px 48)
-                    input <? do
-                        "border" -: "none"
-                        "background" -: "none"
-                        height (px 48)
-                        width (px 48)
-                        cursor pointer
-                        transition "all" (ms 150) ease (ms 150)
-                        borderBottom (px 4) solid fg2
-                        ":hover" & borderBottomColor primary
+                    input <? width (px 48)
             h1 <? do
                 fontSize (px 24)
                 fontWeight (weight 500)
