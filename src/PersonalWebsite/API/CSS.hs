@@ -1,10 +1,10 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module PersonalWebsite.API.CSS (mkBaseStyle) where
 
 import Capability.Reader
 import Clay
-import PersonalWebsite.Colors
+import Optics hiding (pre, (#), (&), (|>))
+import PersonalWebsite.Colors hiding (background)
+import PersonalWebsite.Internal
 import Relude hiding (ask, div, (&), (**))
 
 serifFont :: Css
@@ -32,30 +32,30 @@ allLangs =
     , "purescript"
     ]
 
-codeStyle :: Css
-codeStyle = do
-    code ? monospaceFont
-    div # ".sourceCode" ? do
-        border (px 1) solid (nord3 nordPalette)
-        margin (px 24) (px 0) (px 32) (px 0)
-        marginBottom (px 32)
-        position relative
-        mapM_
-            (\l -> star # byClass l ? do "font-feature-settings" -: fontFeature l)
-            allLangs
-        ".langtag" <? do
-            position absolute
-            right (px 0)
-            top (px 0)
-            padding (px 3) (px 3) (px 4) (px 8)
-        pre <? do
-            margin (px 32) (px 12) (px 12) (px 12)
-            mapM_ langBefore allLangs
-            before & do
+mkCodeStyle :: (HasReader "colorSeed" Int m) => m Css
+mkCodeStyle =
+    askColorPalette <&> \plt -> do
+        code ? monospaceFont
+        div # ".sourceCode" ? do
+            border (px 1) solid (plt ^. #fg1)
+            marginPx 24 0 32 0
+            marginBottom (px 32)
+            position relative
+            forM_ allLangs $ \l ->
+                star # byClass l ? ("font-feature-settings" -: fontFeature l)
+            ".langtag" <? do
                 position absolute
-                left (px 0)
+                right (px 0)
                 top (px 0)
-                padding (px 3) (px 8) (px 4) (px 3)
+                paddingPx 3 3 4 8
+            pre <? do
+                marginPx 32 12 12 12
+                mapM_ langBefore allLangs
+                before & do
+                    position absolute
+                    left (px 0)
+                    top (px 0)
+                    paddingPx 3 8 4 3
   where
     langBefore l = fromString (toString $ "." <> l) <> before & content (stringContent l)
     fontFeature x
@@ -66,33 +66,20 @@ codeStyle = do
         | otherwise =
             "\"calt\" 1"
 
-mkToysStyle :: (HasReader "colorSeed" Int m) => m Css
-mkToysStyle = do
-    Palette{fg1, fg2, primary} <- askColorPalette
-    pure $ do
-        a ? ".single-toy" & do
-            display block
-            maxWidth (px 768)
-            sequence_ $ [marginLeft, marginRight] ?? auto
-            sequence_ $ [paddingRight, paddingLeft] ?? px 16
-            transition "all" (ms 150) ease (ms 150)
-            border (px 2) solid fg2
-            color fg1
-            background $ setTransparency 0.4 fg2
-            ":hover" & do
-                color fg1
-                borderColor primary
-                background $ setTransparency 0.4 primary
+flexRow :: Css
+flexRow = do
+    display flex
+    flexDirection row
+    alignItems center
 
 mkBlogStyle :: HasReader "colorSeed" Int m => m Css
-mkBlogStyle = do
-    Palette{bg, fg2, highlight} <- askColorPalette
-    pure $ do
+mkBlogStyle =
+    askColorPalette <&> \plt -> do
         a <> (".tag-header" ** ".tag") ? monospaceFont
-        (".tag-header" ** ".tag") ? color highlight
+        (".tag-header" ** ".tag") ? color (plt ^. #highlight)
         ".blog-list" ? do
             ".seperator" ? do
-                background fg2
+                background (plt ^. #fg2)
                 height (px 4)
                 sequence_ $ [marginLeft, marginRight, marginTop] <&> ($ px 16)
             margin (px 0) auto (px 0) auto
@@ -112,33 +99,29 @@ mkBlogStyle = do
                         background $
                             linearGradient
                                 (angular $ deg 0)
-                                [(bg, 0), (transparent, 100)]
+                                [(plt ^. #bg, 0), (transparent, 100)]
                         width (pct 100)
                         zIndex 2
                 ".link-row" <? do
+                    flexRow
                     marginTop (px 12)
-                    display flex
-                    flexDirection row
                     justifyContent flexEnd
                     fontSize (px 18)
                     a <? do
                         display block
-                        padding (px 4) (px 4) (px 4) (px 4)
+                        paddingPx 4 4 4 4
                         fontWeight bold
         ".metadata" ? do
-            display flex
-            flexDirection row
+            flexRow
             justifyContent spaceBetween
             ".tags" <? do
-                display flex
-                flexDirection row
+                flexRow
                 "gap" -: "8px"
 
 tagsStyle :: Css
 tagsStyle =
     ".tags" ? do
-        display flex
-        flexDirection row
+        flexRow
         fontSize (px 20)
         justifyContent center
         "gap" -: "16px"
@@ -146,20 +129,17 @@ tagsStyle =
 
 mkBaseStyle :: HasReader "colorSeed" Int m => m Css
 mkBaseStyle = do
-    Palette{bg, fg1, fg2, primary} <- askColorPalette
-    blogStyle <- mkBlogStyle
-    toysStyle <- mkToysStyle
+    plt <- askColorPalette
+    styles <- sequence [mkBlogStyle, mkCodeStyle]
     pure $ do
-        color fg1
-        blogStyle
-        toysStyle
-        codeStyle
+        color (plt ^. #fg1)
+        sequence_ styles
         tagsStyle
         input ? ".no-display" & display none
         "input[type=text]" ? paddingLeft (px 12)
         "input[type=submit]" ? ":hover" & do
-            color primary
-            borderBottomColor primary
+            color (plt ^. #primary)
+            borderBottomColor (plt ^. #primary)
             cursor pointer
             transition "all" (ms 150) ease (ms 150)
         input <? do
@@ -167,69 +147,66 @@ mkBaseStyle = do
             "border" -: "none"
             "background" -: "none"
             height (px 48)
-            color fg2
+            color (plt ^. #fg2)
             fontSize (px 18)
             fontWeight (weight 400)
-            borderBottom (px 4) solid fg2
+            borderBottom (px 4) solid (plt ^. #fg2)
         ".lost" <> ".empty" <? do
             paddingTop (px 64)
             paddingBottom (px 64)
             textAlign center
             a ? fontWeight bold
         a ? do
-            textDecoration none
+            textDecoration underline
             transition "color" (ms 150) ease (ms 150)
-            color fg2
-            ":hover" & color primary
+            color (plt ^. #fg2)
+            ":hover" & color (plt ^. #primary)
         h1 <> h2 <> h3 <> h4 <> header ? serifFont
         header ? do
+            flexRow
             whiteSpace nowrap
             zIndex 4
-            background $ setTransparency 0.5 bg
+            background $ setTransparency 0.5 (plt ^. #bg)
             height (px 48)
             lineHeight (px 48)
-            padding (px 0) (px 32) (px 0) (px 32)
+            paddingPx 0 32 0 32
             position sticky
             top (px 0)
-            display flex
-            flexDirection row
             justifyContent spaceBetween
-            alignItems center
             maxWidth (px 1024)
             margin auto auto auto auto
             ".title" <? do
+                flexRow
                 height (px 48)
-                display flex
-                flexDirection row
-                alignItems center
                 "gap" -: "16px"
                 form <? do
-                    margin (px 0) (px 0) (px 0) (px 0)
+                    marginPx 0 0 0 0
                     height (px 48)
                     input <? width (px 48)
             h1 <? do
                 fontSize (px 24)
                 fontWeight (weight 500)
-                margin (px 0) (px 0) (px 0) (px 0)
+                marginPx 0 0 0 0
             div # ".nav" |> a <? do
+                textDecoration none
                 fontSize (px 18)
                 fontWeight (weight 400)
-                padding (px 0) (px 8) (px 0) (px 8)
+                paddingPx 0 8 0 8
                 height (px 44)
                 display inlineBlock
                 transition "all" (ms 150) ease (ms 150)
                 ".active" & do
-                    borderBottom (px 4) solid fg2
-                    ":hover" & borderBottomColor primary
+                    borderBottom (px 4) solid (plt ^. #fg2)
+                    ":hover" & borderBottomColor (plt ^. #primary)
             h2 <? do
                 flexShrink 1
                 overflow hidden
                 textOverflow overflowEllipsis
         body ? do
-            background bg
-            color fg1
+            background (plt ^. #bg)
+            color (plt ^. #fg1)
             sansSerifFont
-            margin (px 0) (px 0) (px 0) (px 0)
+            marginPx 0 0 0 0
             div # ".content" <? do
                 paddingTop (px 24)
                 paddingLeft (px 16)
@@ -241,14 +218,12 @@ mkBaseStyle = do
                     maxWidth (px 768)
                     marginLeft auto
                     marginRight auto
-        ".intro-block" ? do
-            fontSize (px 18)
+        ".intro-block" ? fontSize (px 18)
         ".pager" ? do
+            flexRow
             height (px 96)
-            display flex
             justifyContent spaceBetween
             height (px 96)
-            alignItems center
             fontSize (px 18)
             a # ".disabled" <? do
                 textDecoration lineThrough

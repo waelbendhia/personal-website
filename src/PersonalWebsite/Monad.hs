@@ -11,6 +11,7 @@ import Capability.Source
 import qualified Control.Monad.Except as MTL
 import Katip
 import PersonalWebsite.Blogs
+import PersonalWebsite.Logging
 import PersonalWebsite.Strategies
 import Relude hiding (MonadReader, ask, local)
 import Servant.Server
@@ -22,6 +23,7 @@ data AppContext = AppContext
     , logContexts :: !LogContexts
     , logNamespace :: !Namespace
     , colorSeed :: !Int
+    , blogSource :: !BlogSource
     }
     deriving (Generic)
 
@@ -50,21 +52,20 @@ newtype AppMonad a = AppMonad {runAppMonad :: AppContext -> IO (Either AppError 
     deriving
         (HasSource "colorSeed" Int, HasReader "colorSeed" Int)
         via Field "colorSeed" () AppMonad
-    deriving (HasBlogRepo, HasSource "tags" [Text]) via (BlogRepoFromFolder AppMonad)
     deriving
-        ( HasThrow "app" AppError
-        , HasCatch "app" AppError
-        )
+        (HasSource "blogSource" BlogSource, HasReader "blogSource" BlogSource)
+        via Field "blogSource" () AppMonad
+    deriving
+        (Katip, KatipContext)
+        via (KatipFromReader '["logEnv", "logContexts", "logNamespace"] AppMonad)
+    deriving (HasBlogs, HasSource "tags" [Text]) via (BlogsFromSource AppMonad)
+    deriving
+        (HasThrow "app" AppError, HasCatch "app" AppError)
         via MonadError (ReaderT AppContext (ExceptT AppError IO))
     deriving
-        ( HasThrow "pandoc" PandocError
-        , HasCatch "pandoc" PandocError
-        )
+        (HasThrow "pandoc" PandocError, HasCatch "pandoc" PandocError)
         via Rename "AppPandoc" (Ctor "AppPandoc" "app" AppMonad)
     deriving (MTL.MonadError PandocError, PandocMonad) via PandocViaIO AppMonad
-
-instance HasSource "folder" Text AppMonad where
-    await_ _ = pure "/home/wael/Development/personal/personal-website/test-blogs"
 
 withLogEnv :: (LogEnv -> IO b) -> IO b
 withLogEnv f = do
@@ -80,8 +81,8 @@ withLogEnv f = do
                 =<< initLogEnv "PersonalWebsite" "production"
     bracket makeLogEnv closeScribes f
 
-withAppMonad :: AppMonad b -> IO (Either AppError b)
-withAppMonad m = withLogEnv $ \le ->
+withAppMonad :: BlogSource -> AppMonad b -> IO (Either AppError b)
+withAppMonad blogSource' m = withLogEnv $ \le ->
     runAppMonad
         m
         AppContext
@@ -89,14 +90,5 @@ withAppMonad m = withLogEnv $ \le ->
             , logContexts = mempty
             , logNamespace = "PersonalWebsite"
             , colorSeed = 0
+            , blogSource = blogSource'
             }
-
-instance Katip AppMonad where
-    getLogEnv = ask @"logEnv"
-    localLogEnv = local @"logEnv"
-
-instance KatipContext AppMonad where
-    getKatipContext = ask @"logContexts"
-    localKatipContext = local @"logContexts"
-    getKatipNamespace = ask @"logNamespace"
-    localKatipNamespace = local @"logNamespace"

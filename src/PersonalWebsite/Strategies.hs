@@ -8,8 +8,7 @@ import Katip
 import Relude
 import Text.Pandoc as P
 
-newtype PandocViaIO m a = PandocViaIO (m a)
-    deriving (Functor, Applicative, Monad)
+newtype PandocViaIO m a = PandocViaIO (m a) deriving (Functor, Applicative, Monad)
 
 throwPandoc :: (HasThrow "pandoc" PandocError m) => m (Either PandocError b) -> m b
 throwPandoc = (either (throw @"pandoc") pure =<<)

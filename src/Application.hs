@@ -10,16 +10,36 @@ import Network.Wai (Middleware)
 import Network.Wai.Handler.Warp
 import Options.Applicative
 import PersonalWebsite.API
+import PersonalWebsite.Blogs.Capabilities
+import PersonalWebsite.Handlers
 import PersonalWebsite.Monad
 import Relude hiding (ask)
 import Servant
 import UnliftIO
 
-data ApplicationConfig = ApplicationConfig
-    { port :: !Int
-    , source :: !Text
-    }
+data ApplicationConfig = ApplicationConfig {port :: !Int, source :: !BlogSource}
     deriving (Show)
+
+sourceParser :: Parser BlogSource
+sourceParser =
+    let folderSource =
+            Folder
+                <$> strOption
+                    ( long "folder"
+                        <> short 's'
+                        <> help "folder containing blog posts"
+                        <> value "/home/wael/Development/personal/personal-website/test-blogs"
+                        <> showDefault
+                    )
+        githubSource =
+            Github
+                <$> strOption
+                    ( long "repo"
+                        <> short 'r'
+                        <> help "repo containing blog posts"
+                        <> showDefault
+                    )
+     in githubSource <|> folderSource
 
 configParser :: Parser ApplicationConfig
 configParser =
@@ -32,13 +52,7 @@ configParser =
                 <> value 8081
                 <> showDefault
             )
-        <*> strOption
-            ( long "source"
-                <> short 's'
-                <> help "source of glob posts"
-                <> value ""
-                <> showDefault
-            )
+        <*> sourceParser
 
 hoistApplication ::
     (forall a. m a -> n a) ->
@@ -64,13 +78,14 @@ toHandler :: AppContext -> AppMonad a -> Servant.Handler a
 toHandler ctx = coerce . fmap (first toServerError) . (`runAppMonad` ctx)
 
 runApp :: IO ()
-runApp = void . withAppMonad $ do
-    ApplicationConfig p _ <- liftIO $ execParser $ info configParser fullDesc
-    loggerMiddleware <- mkLoggerMiddleware
-    $logTM InfoS "application starting"
-    ctx <- ask @()
-    liftIO $
-        run p
-            . loggerMiddleware
-            . serve api
-            $ hoistServer api (toHandler ctx) server
+runApp = void $ do
+    ApplicationConfig p src <- execParser $ info configParser fullDesc
+    withAppMonad src $ do
+        loggerMiddleware <- mkLoggerMiddleware
+        $logTM InfoS "application starting"
+        ctx <- ask @()
+        liftIO $
+            run p
+                . loggerMiddleware
+                . serve api
+                $ hoistServer api (toHandler ctx) server

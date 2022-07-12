@@ -30,6 +30,7 @@ dependencies:
 - cookie
 - http-api-data
 - file-embed
+- github
 - http-types
 - katip
 - katip-wai

@@ -41,15 +41,19 @@ library
       PersonalWebsite.Colors.RandomGen
       PersonalWebsite.Cookies
       PersonalWebsite.CSS.Parser
+      PersonalWebsite.Handlers
       PersonalWebsite.Home
+      PersonalWebsite.Home.API
       PersonalWebsite.Home.Pages
       PersonalWebsite.Internal
+      PersonalWebsite.Logging
       PersonalWebsite.Monad
       PersonalWebsite.Pages
       PersonalWebsite.Pages.Container
       PersonalWebsite.Random
       PersonalWebsite.Strategies
       PersonalWebsite.Toys
+      PersonalWebsite.Toys.API
       PersonalWebsite.Toys.PaletteGenerator
   other-modules:
       Paths_personal_website
@@ -98,6 +102,7 @@ library
     , clay
     , cookie
     , file-embed
+    , github
     , http-api-data
     , http-types
     , katip
@@ -169,6 +174,7 @@ executable personal-website-exe
     , clay
     , cookie
     , file-embed
+    , github
     , http-api-data
     , http-types
     , katip
@@ -242,6 +248,7 @@ test-suite personal-website-test
     , clay
     , cookie
     , file-embed
+    , github
     , http-api-data
     , http-types
     , katip

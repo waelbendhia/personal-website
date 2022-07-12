@@ -8,19 +8,16 @@ newtype SessionData = SessionData {seed :: Int}
 
 parseFromText :: Text -> Either Text SessionData
 parseFromText t =
-    SessionData
-        <$> maybe
-            (Left $ "invalid color mode " <> t)
-            Right
-            (readMaybe (toString t))
+    maybe
+        (Left $ "invalid color mode " <> t)
+        (Right . SessionData)
+        (readMaybe $ toString t)
 
 instance FromHttpApiData SessionData where
     parseHeader v = do
-        let cookies = parseCookies v
         (_, sData) <-
-            maybe
-                (Left "'session-data' cookie not found")
-                pure
-                (find ((== "session-data") . fst) cookies)
+            parseCookies v
+                & find ((== "session-data") . fst)
+                & maybe (Left "'session-data' cookie not found") pure
         parseFromText $ decodeUtf8 sData
     parseQueryParam = parseFromText
