@@ -5,7 +5,6 @@ module PersonalWebsite.Blogs.Pages (
     tagsPage,
 ) where
 
-import Capability.Source
 import Data.Text hiding (span)
 import qualified Data.Text as T hiding (span)
 import Data.Time
@@ -15,10 +14,12 @@ import PersonalWebsite.Blogs.API
 import PersonalWebsite.Blogs.Capabilities
 import PersonalWebsite.Blogs.Data
 import PersonalWebsite.Internal
+import PersonalWebsite.Pandoc
+import Polysemy
+import Polysemy.Input
 import Relude hiding (div, span)
 import qualified Text.Blaze.Html5.Attributes as A
 import Text.Blaze.XHtml5
-import Text.Pandoc
 
 truncateMD :: Int -> [Text] -> [Text]
 truncateMD maxLines = go 0
@@ -37,23 +38,28 @@ blogsLink :: Maybe Int -> Maybe Text -> Attribute
 blogsLink p' t =
     A.href (fromLink $ apiLink (Proxy @PageBlogsAPI) p' t)
 
-toSummary :: PandocMonad m => BlogEntry -> m Html
+toSummary :: Member Render r => BlogEntry -> Sem r Html
 toSummary be =
     renderBlogEntry (be & #content % #content %~ truncateMD 13) <&> \body' ->
         div ! A.class_ "blog-item" $ do
             div ! A.class_ "summary" $ body'
             div ! A.class_ "link-row" $
-                a ! A.href (fromLink $ apiLink (Proxy @BlogAPI) (be ^. #path)) $ "GOTO"
+                a ! A.href (fromLink $ apiLink (Proxy @BlogAPI) (be ^. #path)) $
+                    "GOTO"
 
 renderTag :: Text -> Html
 renderTag t = a ! blogsLink Nothing (Just t) ! A.class_ "tag" $ toMarkup t
 
-renderBlogEntry :: PandocMonad m => BlogEntry -> m Html
+renderBlogEntry :: Member Render r => BlogEntry -> Sem r Html
 renderBlogEntry be =
     mapM renderMarkdown (be ^. #content % #content) <&> \body' -> do
         h2 $ toMarkup $ be ^. #content % #title
         div ! A.class_ "metadata" $ do
-            div $ toMarkup $ formatTime defaultTimeLocale "%B %e %Y" (be ^. #date)
+            div $ do
+                toMarkup $ formatTime defaultTimeLocale "%B %e %Y" (be ^. #content % #date)
+                br
+                "Last modified on "
+                toMarkup $ formatTime defaultTimeLocale "%B %e %Y" (be ^. #editDate)
             div ! A.class_ "tags" $ mapM_ renderTag (be ^. #content % #tags)
         sequence_ body'
 
@@ -78,10 +84,10 @@ renderTagHeader t = div ! A.class_ "tag-header" $ do
         "."
 
 blogsPage ::
-    (HasBlogs m, PandocMonad m) =>
+    Members '[Blogs, Render] r =>
     Int ->
     Maybe Text ->
-    m Html
+    Sem r Html
 blogsPage p' mtag = do
     bs <- getBlogs p' mtag
     summaries <- mapM toSummary bs
@@ -93,7 +99,7 @@ blogsPage p' mtag = do
             when (Relude.null bs) $ div ! A.class_ "empty" $ "Nothing to see here."
             pager p' bs
 
-tagsPage :: HasTags m => m Html
-tagsPage = awaits @"tags" $ \ts -> do
+tagsPage :: (Members '[Input Tags] r) => Sem r Html
+tagsPage = inputs $ \ts -> do
     h2 "Here's all the tags"
-    div ! A.class_ "tags" $ mapM_ renderTag ts
+    div ! A.class_ "tags" $ coerce @Tags @[Text] ts `forM_` renderTag

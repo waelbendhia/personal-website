@@ -2,7 +2,6 @@
 
 module PersonalWebsite.Toys.PaletteGenerator (colorGeneratorPage) where
 
-import Capability.Reader
 import qualified Clay as C
 import Data.FileEmbed
 import Optics
@@ -11,27 +10,26 @@ import PersonalWebsite.API.CSS (mkBaseStyle)
 import PersonalWebsite.Colors
 import PersonalWebsite.Colors.Conversion
 import PersonalWebsite.Internal
+import PersonalWebsite.Pandoc
 import PersonalWebsite.Toys.API
-import Relude hiding (ask, div, local, span)
+import Polysemy
+import Polysemy.Reader
+import Relude hiding (Reader, ask, div, local, span)
 import Skylighting
 import Text.Blaze.Html5
 import qualified Text.Blaze.Html5.Attributes as A
-import Text.Pandoc
 
-sampleBlog :: Html
-sampleBlog =
-    either (error . show) id
-        . runPure
-        . renderMarkdown
-        $ decodeUtf8 $(embedFile "assets/color-generator-samples.md")
+mkSampleBlog :: Member Render r => Sem r Html
+mkSampleBlog = renderMarkdown $ decodeUtf8 $(embedFile "assets/color-generator-samples.md")
 
-getBG :: HasReader "colorSeed" Int m => m C.Color
+getBG :: Member (Reader ColorSeed) r => Sem r C.Color
 getBG = askColorPalette <&> view #bg
 
-mkSample :: HasReader "colorSeed" Int m => String -> m Html
+mkSample :: Members [Reader ColorSeed, Render] r => String -> Sem r Html
 mkSample className = do
     sampleStyle <- mkBaseStyle
     sampleCodeStyle <- askCodeStyle
+    sampleBlog <- mkSampleBlog
     bg' <- getBG
     pure $ do
         style . toMarkup . C.render $
@@ -43,7 +41,9 @@ mkSample className = do
                 C.background bg'
         style
             . toMarkup
-            $ scopeCSS ("." <> toText className) $ toText $ styleToCss sampleCodeStyle
+            $ scopeCSS ("." <> toText className)
+            $ toText
+            $ styleToCss sampleCodeStyle
         div ! A.class_ (fromString $ "sample " <> className) $ sampleBlog
         pass
 
@@ -58,7 +58,7 @@ offsetBGBy :: Float -> C.Color -> C.Color
 offsetBGBy d c =
     if getLightness c > 0.5 then C.lighten d c else C.darken d c
 
-mkPageCSS :: (HasReader "colorSeed" Int m) => m C.Css
+mkPageCSS :: Member (Reader ColorSeed) r => Sem r C.Css
 mkPageCSS = do
     bg' <- shiftBG <$> getBG
     pure $ do
@@ -93,17 +93,16 @@ mkPageCSS = do
                     C.paddingTop (C.px 12)
                 ".color" C.<? C.height (C.px 48)
 
-colorGeneratorPage :: (HasReader "colorSeed" Int m) => Maybe SeedParam -> m Html
+colorGeneratorPage :: Members [Reader ColorSeed, Render] r => Maybe SeedParam -> Sem r Html
 colorGeneratorPage mSeed = do
     currentPalette <- mkPalette False
     pageCSS <- mkPageCSS
-    testPalette <- forM mSeed $ \case
-        Seed s -> local @"colorSeed" (const s) $ mkPalette True
-        IncorrectSeed t -> pure $
-            span $ do
-                "Bad Seed"
-                seedLink
-                toMarkup $ " " <> t
+    testPalette <- forM mSeed \case
+        Seed s -> local (const s) $ mkPalette True
+        IncorrectSeed t -> pure . span $ do
+            "Bad Seed"
+            seedLink
+            toMarkup $ " " <> t
     pure . div $ do
         style . toMarkup $ C.render pageCSS
         h1 "Current palette"
@@ -115,26 +114,28 @@ colorGeneratorPage mSeed = do
   where
     seedLink = a ! A.href "https://www.youtube.com/watch?v=Ahr4KFl79WI" ! A.target "blank" $ ":"
     tryForm =
-        form ! A.method "GET"
+        form
+            ! A.method "GET"
             ! A.action
                 (fromLink $ apiLink (Proxy @ColorGeneratorAPI) Nothing)
             $ do
                 input ! A.type_ "submit" ! A.value "try with seed"
-                input ! A.type_ "text" ! A.name "seed"
+                input
+                    ! A.type_ "text"
+                    ! A.name "seed"
                     ! A.value
                         ( case mSeed of
-                            Just (Seed s) -> show s
+                            Just (Seed s) -> fromString $ toString $ toText s
                             _ -> ""
                         )
 
-mkPalette :: (HasReader "colorSeed" Int m) => Bool -> m Html
+mkPalette :: Members [Reader ColorSeed, Render] r => Bool -> Sem r Html
 mkPalette showSetPaletteButton = do
-    seed <- ask @"colorSeed"
+    seed <- ask @ColorSeed
     plt <- askColorPalette
     cPlt <- askCodeHighlight
-    let blockName :: Text
-        blockName = "seeded(" <> show seed <> ")"
-        className = "seeded" <> show seed
+    let blockName = "seeded(" <> toText seed <> ")"
+        className = toString $ "seeded" <> toText seed
         paletteCSS =
             fromString ("." <> className) C.? do
                 ".bg" C.? ".color" C.? C.background (plt ^. #bg)
@@ -178,7 +179,11 @@ mkPalette showSetPaletteButton = do
   where
     viewCl plt l = maybe (C.rgb 0 0 0) skylightingToClay (plt ^. l)
     setSeedForm s = form ! A.method "POST" ! A.action "/set-seed" $ do
-        input ! A.class_ "no-display" ! A.type_ "text" ! A.name "seed" ! A.value (show s)
+        input
+            ! A.class_ "no-display"
+            ! A.type_ "text"
+            ! A.name "seed"
+            ! A.value (fromString $ toString $ toText s)
         input ! A.type_ "submit" ! A.value "set this palette"
     bgStyle cl = fromString $ toString $ "background: " <> C.plain (coerce $ C.value cl)
     colorBlock (t, cl) = div ! A.class_ "color-block" $ do

@@ -4,12 +4,14 @@ module PersonalWebsite.Colors.CodeStyle (
     CodeHighlight (..),
 ) where
 
-import Capability.Reader
 import Optics
 import PersonalWebsite.Colors.Conversion
+import PersonalWebsite.Colors.Data
 import PersonalWebsite.Colors.RandomGen
 import qualified PersonalWebsite.Random as R
-import Relude hiding (asks)
+import Polysemy
+import Polysemy.Reader
+import Relude hiding (Reader, asks)
 import Skylighting
 import System.Random
 
@@ -80,10 +82,10 @@ randomHightlight (bgh, bgs, bgl) =
     codeBGL = if bgl > 50 then (bgl + 100) / 2 else bgl / 2
     codeFGL = if bgl > 50 then bgl / 2 else (bgl + 100) / 2
 
-askCodeHighlight :: HasReader "colorSeed" Int m => m CodeHighlight
-askCodeHighlight = asks @"colorSeed" $ \s ->
-    let (bg', s') = R.withRandom (mkStdGen s) $ R.randomRM ((0, 0, 0), (255, 100, 100))
+askCodeHighlight :: Member (Reader ColorSeed) r => Sem r CodeHighlight
+askCodeHighlight = asks @ColorSeed $ \s ->
+    let (bg', s') = R.withRandom (mkStdGen $ coerce s) $ R.randomRM ((0, 0, 0), (255, 100, 100))
      in fst $ R.withRandom s' $ randomHightlight bg'
 
-askCodeStyle :: HasReader "colorSeed" Int m => m Style
+askCodeStyle :: Member (Reader ColorSeed) r => Sem r Style
 askCodeStyle = styleFromHighlight <$> askCodeHighlight

@@ -5,22 +5,23 @@ module PersonalWebsite.Blogs (
     blogsHandler,
 ) where
 
-import Capability.Reader
 import PersonalWebsite.Blogs.API
 import PersonalWebsite.Blogs.Capabilities
 import PersonalWebsite.Blogs.Data
 import PersonalWebsite.Blogs.Pages
+import PersonalWebsite.Colors
 import PersonalWebsite.Pages
-import Relude
+import PersonalWebsite.Pandoc
+import Polysemy
+import Polysemy.Input
+import Polysemy.Reader
+import Relude hiding (Reader)
 import Servant
-import Text.Pandoc
 
-blogsHandler ::
-    (PandocMonad m, HasBlogs m, HasTags m, HasReader "colorSeed" Int m) =>
-    ServerT BlogsAPI m
+blogsHandler :: Members '[Blogs, Render, Input Tags, Reader ColorSeed] r => ServerT BlogsAPI (Sem r)
 blogsHandler = pageBlogsHandler :<|> tagsHandler :<|> blogHandler
   where
-    pageBlogsHandler page = blogsPage (fromMaybe 0 page) >=> renderSite Blog
-    tagsHandler = tagsPage >>= renderSite Blog
+    pageBlogsHandler page = renderSite Blog <=< blogsPage (fromMaybe 0 page)
+    tagsHandler = renderSite Blog =<< tagsPage
     blogHandler =
-        getBlog >=> maybe (renderSite None lostPage) (renderBlogEntry >=> renderSite Blog)
+        maybe (renderSite None lostPage) (renderSite Blog <=< renderBlogEntry) <=< getBlog

@@ -1,13 +1,13 @@
 cradle:
-  stack:
-    - path: "./src"
-      component: "personal-website:lib"
+  cabal:
+    - path: "src"
+      component: "lib:personal-website"
 
-    - path: "./app/Main.hs"
+    - path: "app/Main.hs"
       component: "personal-website:exe:personal-website-exe"
 
-    - path: "./app/Paths_personal_website.hs"
+    - path: "app/Paths_personal_website.hs"
       component: "personal-website:exe:personal-website-exe"
 
-    - path: "./test"
+    - path: "test"
       component: "personal-website:test:personal-website-test"

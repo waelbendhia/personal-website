@@ -1,108 +1,120 @@
-cabal-version: 1.12
+cabal-version:      1.12
+name:               personal-website
+version:            0.1.0.0
+description:
+  Please see the README on GitHub at <https://github.com/githubuser/personal-website#readme>
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
---
--- see: https://github.com/sol/hpack
-
-name:           personal-website
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/personal-website#readme>
-homepage:       https://github.com/githubuser/personal-website#readme
-bug-reports:    https://github.com/githubuser/personal-website/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2022 Author name here
-license:        BSD3
-license-file:   LICENSE
-build-type:     Simple
+homepage:           https://github.com/githubuser/personal-website#readme
+bug-reports:        https://github.com/githubuser/personal-website/issues
+author:             Author name here
+maintainer:         example@example.com
+copyright:          2022 Author name here
+license:            BSD3
+license-file:       LICENSE
+build-type:         Simple
 extra-source-files:
-    README.md
-    ChangeLog.md
+  ChangeLog.md
+  README.md
 
 source-repository head
-  type: git
+  type:     git
   location: https://github.com/githubuser/personal-website
 
 library
   exposed-modules:
-      Application
-      PersonalWebsite.API
-      PersonalWebsite.API.CSS
-      PersonalWebsite.Blogs
-      PersonalWebsite.Blogs.API
-      PersonalWebsite.Blogs.Capabilities
-      PersonalWebsite.Blogs.Data
-      PersonalWebsite.Blogs.Pages
-      PersonalWebsite.Colors
-      PersonalWebsite.Colors.API
-      PersonalWebsite.Colors.CodeStyle
-      PersonalWebsite.Colors.Conversion
-      PersonalWebsite.Colors.Palette
-      PersonalWebsite.Colors.RandomGen
-      PersonalWebsite.Cookies
-      PersonalWebsite.CSS.Parser
-      PersonalWebsite.Handlers
-      PersonalWebsite.Home
-      PersonalWebsite.Home.API
-      PersonalWebsite.Home.Pages
-      PersonalWebsite.Internal
-      PersonalWebsite.Logging
-      PersonalWebsite.Monad
-      PersonalWebsite.Pages
-      PersonalWebsite.Pages.Container
-      PersonalWebsite.Random
-      PersonalWebsite.Strategies
-      PersonalWebsite.Toys
-      PersonalWebsite.Toys.API
-      PersonalWebsite.Toys.PaletteGenerator
-  other-modules:
-      Paths_personal_website
-  hs-source-dirs:
-      src
+    Application
+    PersonalWebsite.API
+    PersonalWebsite.API.CSS
+    PersonalWebsite.Blogs
+    PersonalWebsite.Blogs.API
+    PersonalWebsite.Blogs.Capabilities
+    PersonalWebsite.Blogs.Data
+    PersonalWebsite.Blogs.Pages
+    PersonalWebsite.Colors
+    PersonalWebsite.Colors.API
+    PersonalWebsite.Colors.CodeStyle
+    PersonalWebsite.Colors.Conversion
+    PersonalWebsite.Colors.Data
+    PersonalWebsite.Colors.Palette
+    PersonalWebsite.Colors.RandomGen
+    PersonalWebsite.Cookies
+    PersonalWebsite.CSS.Parser
+    PersonalWebsite.Handlers
+    PersonalWebsite.Home
+    PersonalWebsite.Home.API
+    PersonalWebsite.Home.Pages
+    PersonalWebsite.Internal
+    PersonalWebsite.Katip
+    PersonalWebsite.KVCache
+    PersonalWebsite.Monad
+    PersonalWebsite.Pages
+    PersonalWebsite.Pages.Container
+    PersonalWebsite.Pandoc
+    PersonalWebsite.Random
+    PersonalWebsite.Toys
+    PersonalWebsite.Toys.API
+    PersonalWebsite.Toys.PaletteGenerator
+    PersonalWebsite.Tracing
+
+  other-modules:      Paths_personal_website
+  hs-source-dirs:     src
   default-extensions:
-      Arrows
-      BangPatterns
-      DataKinds
-      DefaultSignatures
-      DeriveGeneric
-      DerivingVia
-      DuplicateRecordFields
-      FlexibleContexts
-      FlexibleInstances
-      GADTs
-      GeneralizedNewtypeDeriving
-      LambdaCase
-      MultiParamTypeClasses
-      MultiWayIf
-      NoImplicitPrelude
-      OverloadedLabels
-      OverloadedStrings
-      PolyKinds
-      KindSignatures
-      ConstraintKinds
-      QuantifiedConstraints
-      QuasiQuotes
-      RankNTypes
-      ScopedTypeVariables
-      StandaloneDeriving
-      TemplateHaskell
-      TupleSections
-      TypeApplications
-      TypeFamilies
-      TypeOperators
-      UndecidableInstances
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+    NoImplicitPrelude
+    Arrows
+    BangPatterns
+    BlockArguments
+    ConstraintKinds
+    DataKinds
+    DefaultSignatures
+    DeriveGeneric
+    DerivingVia
+    DuplicateRecordFields
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    MultiWayIf
+    OverloadedLabels
+    OverloadedStrings
+    PolyKinds
+    QuantifiedConstraints
+    QuasiQuotes
+    RankNTypes
+    ScopedTypeVariables
+    StandaloneDeriving
+    TemplateHaskell
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    UndecidableInstances
+
+  ghc-options:
+    -Wall -Werror -Wcompat -Widentities -Wincomplete-uni-patterns
+    -Wpartial-fields -Wredundant-constraints
+
   build-depends:
       aeson
     , attoparsec
-    , base >=4.7 && <5
+    , base                                  >=4.7 && <5
+    , base58-bytestring
+    , binary
     , blaze-html
     , blaze-markup
+    , bytestring
+    , cache
     , capability
     , clay
     , cookie
+    , cryptohash
+    , directory
     , file-embed
-    , github
+    , hs-opentelemetry-api
+    , hs-opentelemetry-instrumentation-wai
+    , hs-opentelemetry-sdk
     , http-api-data
     , http-types
     , katip
@@ -111,6 +123,8 @@ library
     , optics
     , optparse-applicative
     , pandoc
+    , polysemy
+    , polysemy-zoo
     , random
     , relude
     , servant
@@ -120,61 +134,69 @@ library
     , text
     , time
     , unliftio
+    , vault
     , wai
     , warp
     , yaml
-  default-language: Haskell2010
+
+  default-language:   Haskell2010
 
 executable personal-website-exe
-  main-is: Main.hs
-  other-modules:
-      Paths_personal_website
-  hs-source-dirs:
-      app
+  main-is:            Main.hs
+  other-modules:      Paths_personal_website
+  hs-source-dirs:     app
   default-extensions:
-      Arrows
-      BangPatterns
-      DataKinds
-      DefaultSignatures
-      DeriveGeneric
-      DerivingVia
-      DuplicateRecordFields
-      FlexibleContexts
-      FlexibleInstances
-      GADTs
-      GeneralizedNewtypeDeriving
-      LambdaCase
-      MultiParamTypeClasses
-      MultiWayIf
-      NoImplicitPrelude
-      OverloadedLabels
-      OverloadedStrings
-      PolyKinds
-      KindSignatures
-      ConstraintKinds
-      QuantifiedConstraints
-      QuasiQuotes
-      RankNTypes
-      ScopedTypeVariables
-      StandaloneDeriving
-      TemplateHaskell
-      TupleSections
-      TypeApplications
-      TypeFamilies
-      TypeOperators
-      UndecidableInstances
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+    NoImplicitPrelude
+    Arrows
+    BangPatterns
+    BlockArguments
+    ConstraintKinds
+    DataKinds
+    DefaultSignatures
+    DeriveGeneric
+    DerivingVia
+    DuplicateRecordFields
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    MultiWayIf
+    OverloadedLabels
+    OverloadedStrings
+    PolyKinds
+    QuantifiedConstraints
+    QuasiQuotes
+    RankNTypes
+    ScopedTypeVariables
+    StandaloneDeriving
+    TemplateHaskell
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    UndecidableInstances
+
+  ghc-options:
+    -Wall -Werror -Wcompat -Widentities -Wincomplete-uni-patterns
+    -Wpartial-fields -Wredundant-constraints -threaded -rtsopts
+    -with-rtsopts=-N
+
   build-depends:
       aeson
     , attoparsec
-    , base >=4.7 && <5
+    , base                  >=4.7 && <5
+    , base58-bytestring
+    , binary
     , blaze-html
     , blaze-markup
+    , bytestring
     , capability
     , clay
     , cookie
     , file-embed
-    , github
     , http-api-data
     , http-types
     , katip
@@ -184,6 +206,7 @@ executable personal-website-exe
     , optparse-applicative
     , pandoc
     , personal-website
+    , polysemy
     , random
     , relude
     , servant
@@ -196,59 +219,66 @@ executable personal-website-exe
     , wai
     , warp
     , yaml
-  default-language: Haskell2010
+
+  default-language:   Haskell2010
 
 test-suite personal-website-test
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-      Paths_personal_website
-  hs-source-dirs:
-      test
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  other-modules:      Paths_personal_website
+  hs-source-dirs:     test
   default-extensions:
-      Arrows
-      BangPatterns
-      DataKinds
-      DefaultSignatures
-      DeriveGeneric
-      DerivingVia
-      DuplicateRecordFields
-      FlexibleContexts
-      FlexibleInstances
-      GADTs
-      GeneralizedNewtypeDeriving
-      LambdaCase
-      MultiParamTypeClasses
-      MultiWayIf
-      NoImplicitPrelude
-      OverloadedLabels
-      OverloadedStrings
-      PolyKinds
-      KindSignatures
-      ConstraintKinds
-      QuantifiedConstraints
-      QuasiQuotes
-      RankNTypes
-      ScopedTypeVariables
-      StandaloneDeriving
-      TemplateHaskell
-      TupleSections
-      TypeApplications
-      TypeFamilies
-      TypeOperators
-      UndecidableInstances
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+    NoImplicitPrelude
+    Arrows
+    BangPatterns
+    BlockArguments
+    ConstraintKinds
+    DataKinds
+    DefaultSignatures
+    DeriveGeneric
+    DerivingVia
+    DuplicateRecordFields
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    MultiWayIf
+    OverloadedLabels
+    OverloadedStrings
+    PolyKinds
+    QuantifiedConstraints
+    QuasiQuotes
+    RankNTypes
+    ScopedTypeVariables
+    StandaloneDeriving
+    TemplateHaskell
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    UndecidableInstances
+
+  ghc-options:
+    -Wall -Werror -Wcompat -Widentities -Wincomplete-uni-patterns
+    -Wpartial-fields -Wredundant-constraints -threaded -rtsopts
+    -with-rtsopts=-N
+
   build-depends:
       aeson
     , attoparsec
-    , base >=4.7 && <5
+    , base                  >=4.7 && <5
+    , base58-bytestring
+    , binary
     , blaze-html
     , blaze-markup
+    , bytestring
     , capability
     , clay
     , cookie
     , file-embed
-    , github
     , http-api-data
     , http-types
     , katip
@@ -258,6 +288,7 @@ test-suite personal-website-test
     , optparse-applicative
     , pandoc
     , personal-website
+    , polysemy
     , random
     , relude
     , servant
@@ -270,4 +301,5 @@ test-suite personal-website-test
     , wai
     , warp
     , yaml
-  default-language: Haskell2010
+
+  default-language:   Haskell2010

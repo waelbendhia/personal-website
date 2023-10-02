@@ -3,18 +3,16 @@ module PersonalWebsite.Home (
     homeHandler,
 ) where
 
-import Capability.Reader
 import PersonalWebsite.Blogs
+import PersonalWebsite.Colors
 import PersonalWebsite.Home.API
 import PersonalWebsite.Home.Pages
 import PersonalWebsite.Pages
-import Relude hiding (MonadReader, ask, local)
+import PersonalWebsite.Pandoc
+import Polysemy
+import Polysemy.Reader
+import Relude hiding (MonadReader, Reader, ask, local)
 import Servant
-import Text.Pandoc
 
-homeHandler ::
-    (PandocMonad m, HasBlogs m, HasReader "colorSeed" Int m) =>
-    ServerT HomeAPI m
-homeHandler = do
-    bs <- getBlogs 0 Nothing
-    renderSite Home =<< homePage (viaNonEmpty head bs)
+homeHandler :: Members '[Blogs, Render, Reader ColorSeed] r => ServerT HomeAPI (Sem r)
+homeHandler = renderSite Home =<< homePage . viaNonEmpty head =<< getBlogs 0 Nothing

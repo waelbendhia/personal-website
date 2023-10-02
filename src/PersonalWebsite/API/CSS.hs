@@ -1,11 +1,12 @@
 module PersonalWebsite.API.CSS (mkBaseStyle) where
 
-import Capability.Reader
 import Clay
 import Optics hiding (pre, (#), (&), (|>))
 import PersonalWebsite.Colors hiding (background)
 import PersonalWebsite.Internal
-import Relude hiding (ask, div, (&), (**))
+import Polysemy
+import Polysemy.Reader
+import Relude hiding (Reader, ask, div, (&), (**))
 
 serifFont :: Css
 serifFont = fontFamily ["Iosevka Etoile"] [serif]
@@ -32,7 +33,7 @@ allLangs =
     , "purescript"
     ]
 
-mkCodeStyle :: (HasReader "colorSeed" Int m) => m Css
+mkCodeStyle :: (Member (Reader ColorSeed) r) => Sem r Css
 mkCodeStyle =
     askColorPalette <&> \plt -> do
         code ? monospaceFont
@@ -72,7 +73,7 @@ flexRow = do
     flexDirection row
     alignItems center
 
-mkBlogStyle :: HasReader "colorSeed" Int m => m Css
+mkBlogStyle :: (Member (Reader ColorSeed) r) => Sem r Css
 mkBlogStyle =
     askColorPalette <&> \plt -> do
         a <> (".tag-header" ** ".tag") ? monospaceFont
@@ -127,7 +128,7 @@ tagsStyle =
         "gap" -: "16px"
         "flex-wrap" -: "wrap"
 
-mkBaseStyle :: HasReader "colorSeed" Int m => m Css
+mkBaseStyle :: Members '[Reader ColorSeed] r => Sem r Css
 mkBaseStyle = do
     plt <- askColorPalette
     styles <- sequence [mkBlogStyle, mkCodeStyle]
@@ -209,6 +210,7 @@ mkBaseStyle = do
             marginPx 0 0 0 0
             div # ".content" <? do
                 paddingTop (px 24)
+                paddingBottom (px 24)
                 paddingLeft (px 16)
                 paddingRight (px 16)
                 maxWidth (px 1024)

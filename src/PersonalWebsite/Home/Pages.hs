@@ -5,11 +5,12 @@ import PersonalWebsite.API
 import PersonalWebsite.Blogs (BlogEntry, toSummary)
 import PersonalWebsite.Blogs.API
 import PersonalWebsite.Internal
+import PersonalWebsite.Pandoc
+import Polysemy
 import Relude hiding (div, span)
 import qualified Text.Blaze.Html5.Attributes as A
 import Text.Blaze.Internal
 import Text.Blaze.XHtml5
-import Text.Pandoc
 
 introBlock :: Html
 introBlock = div ! A.class_ "intro-block" $ do
@@ -32,7 +33,7 @@ introBlock = div ! A.class_ "intro-block" $ do
                 (fromLink $ apiLink (Proxy @PageBlogsAPI) Nothing (Just $ T.toLower t))
             $ fromText t
 
-homePage :: PandocMonad m => Maybe BlogEntry -> m Html
+homePage :: Member Render r => Maybe BlogEntry -> Sem r Html
 homePage be = do
     b' <- mapM toSummary be
     pure $ do

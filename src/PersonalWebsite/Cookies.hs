@@ -1,23 +1,21 @@
 module PersonalWebsite.Cookies (SessionData (..)) where
 
+import PersonalWebsite.Colors
 import Relude
 import Servant
 import Web.Cookie
 
-newtype SessionData = SessionData {seed :: Int}
+newtype SessionData = SessionData {seed :: ColorSeed}
 
-parseFromText :: Text -> Either Text SessionData
-parseFromText t =
-    maybe
-        (Left $ "invalid color mode " <> t)
-        (Right . SessionData)
-        (readMaybe $ toString t)
+parseFromText :: Text -> Maybe SessionData
+parseFromText =
+    fmap SessionData . fromString . toString
+
+defaultSessionData :: SessionData
+defaultSessionData = SessionData $ ColorSeed 86
 
 instance FromHttpApiData SessionData where
-    parseHeader v = do
-        (_, sData) <-
-            parseCookies v
-                & find ((== "session-data") . fst)
-                & maybe (Left "'session-data' cookie not found") pure
+    parseHeader v = Right . fromMaybe defaultSessionData $ do
+        (_, sData) <- find ((== "session-data") . fst) $ parseCookies v
         parseFromText $ decodeUtf8 sData
-    parseQueryParam = parseFromText
+    parseQueryParam = Right . fromMaybe defaultSessionData . parseFromText

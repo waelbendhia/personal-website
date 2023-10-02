@@ -2,120 +2,135 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module PersonalWebsite.Blogs.Capabilities (
-    HasTags,
-    HasBlogs (..),
-    BlogsFromFolder (..),
-    BlogSource (..),
-    BlogsFromSource (..),
+    Blogs (..),
+    getBlogs,
+    getBlog,
+    runTagsFromFolder,
+    runBlogsFromFolder,
+    traceBlogs,
 ) where
 
-import Capability.Reflection
-import Capability.Source
 import Data.List (nub)
 import qualified Data.Text as T
+import Data.Time
 import Data.Yaml
+import qualified GHC.IO as CE
 import Katip
+import qualified OpenTelemetry.Trace as Otel
 import Optics
 import PersonalWebsite.Blogs.Data
+import PersonalWebsite.Katip
+import PersonalWebsite.Tracing
+import Polysemy
+import Polysemy.Input
+import Polysemy.KVStore
 import Relude
-import UnliftIO
-import UnliftIO.Directory
+import System.Directory
 
-data BlogSource = Folder Text | Github Text deriving (Show)
+data Blogs m a where
+    GetBlogs :: Int -> Maybe Text -> Blogs m [BlogEntry]
+    GetBlog :: Text -> Blogs m (Maybe BlogEntry)
 
-type HasTags = HasSource "tags" [Text]
-
-class Monad m => HasBlogs m where
-    getBlogs :: Int -> Maybe Text -> m [BlogEntry]
-    getBlog :: Text -> m (Maybe BlogEntry)
-
-newtype BlogsFromFolder m a = BlogsFromFolder {unBlogsFromFolder :: m a}
-    deriving (Functor, Applicative, Monad, MonadIO)
+makeSem ''Blogs
 
 stripYml :: Text -> Text
 stripYml t = fromMaybe t $ T.stripSuffix ".yml" t
 
-instance
-    (Monad m, MonadIO m, HasSource "folder" Text m, KatipContext m) =>
-    HasSource "tags" [Text] (BlogsFromFolder m)
-    where
-    await_ _ = do
-        f <- BlogsFromFolder $ await @"folder"
-        fs <- liftIO (listDirectory $ toString f)
-        mapM (getBlog . stripYml . toText) fs
-            <&> catMaybes
+traceBlogs :: Members [Blogs, Tracing] r => Sem r a -> Sem r a
+traceBlogs = intercept \case
+    GetBlogs p' mtag ->
+        inSpan'
+            "GetBlogs"
+            Otel.defaultSpanArguments
+                { Otel.attributes =
+                    fromList
+                        [ ("page", Otel.toAttribute p')
+                        , ("tag", Otel.toAttribute $ fromMaybe "No tag" mtag)
+                        ]
+                }
+            $ getBlogs p' mtag
+    GetBlog f ->
+        inSpan'
+            "GetBlog"
+            Otel.defaultSpanArguments{Otel.attributes = one ("blog-name", Otel.toAttribute f)}
+            $ getBlog f
+
+getBlogIO ::
+    Members '[Embed IO, KVStore Text (UTCTime, BlogEntry), Katiper, Tracing] r =>
+    Text ->
+    Text ->
+    Sem r (Maybe BlogEntry)
+getBlogIO folder fn = katipAddContext (sl "file-path" fp) $ do
+    mblog <- lookupKV fp
+    case mblog of
+        Nothing -> inSpan' "readBlogFromFile" Otel.defaultSpanArguments readBlogFromFile
+        Just (ts, be) -> do
+            d <- embed $ getModificationTime (toString fp)
+            if ts >= d
+                then do
+                    $logTM DebugS "cache hit!"
+                    pure $ Just be
+                else readBlogFromFile
+  where
+    fp = folder <> "/" <> fn <> ".yml"
+    readBlogFromFile = do
+        $logTM DebugS "cache miss!"
+        ecnt <-
+            embed @IO $
+                CE.catch @SomeException
+                    (Right <$> readFileText (toString fp))
+                    (pure . Left)
+        case ecnt of
+            Left ex -> katipAddContext (sl "error" (show @Text ex)) $ do
+                $logTM ErrorS "could not get blog"
+                pure Nothing
+            Right cnt -> katipAddContext (sl "file-path" fp) $ do
+                $logTM DebugS "read file"
+                case decodeEither' (encodeUtf8 cnt) of
+                    Left e -> katipAddContext (sl "error" (show @Text e)) $ do
+                        $logTM ErrorS "decoding failed"
+                        pure Nothing
+                    Right x -> do
+                        d <- embed $ getModificationTime (toString fp)
+                        let be = Just $ BlogEntry{content = x, path = fn, editDate = d}
+                        updateKV fp ((d,) <$> be)
+                        pure be
+
+getBlogsIO ::
+    Members '[Embed IO, KVStore Text (UTCTime, BlogEntry), Tracing, Katiper] r =>
+    Text ->
+    Sem r [BlogEntry]
+getBlogsIO folder = do
+    fs <-
+        inSpan' "listDirectory" Otel.defaultSpanArguments . embed . listDirectory $
+            toString folder
+    catMaybes <$> mapM (runBlogsFromFolder folder . getBlog . stripYml . toText) fs
+
+runTagsFromFolder ::
+    Members '[Embed IO, KVStore Text (UTCTime, BlogEntry), Tracing, Katiper] r =>
+    Text ->
+    Sem (Input Tags ': r) a ->
+    Sem r a
+runTagsFromFolder folder = interpret \case
+    Input ->
+        getBlogsIO folder
             <&> toListOf (traversed % #content % #tags)
             <&> join
             <&> nub
             <&> sort
+            <&> Tags
 
-instance
-    (Monad m, MonadIO m, HasSource "folder" Text m, KatipContext m) =>
-    HasBlogs (BlogsFromFolder m)
-    where
-    getBlogs p' mtag = BlogsFromFolder $ do
-        f <- await @"folder"
-        fs <- liftIO (listDirectory $ toString f)
-        unBlogsFromFolder (mapM (getBlog . stripYml . toText) fs)
-            <&> catMaybes
+runBlogsFromFolder ::
+    forall r a.
+    Members '[Embed IO, KVStore Text (UTCTime, BlogEntry), Tracing, Katiper] r =>
+    Text ->
+    Sem (Blogs : r) a ->
+    Sem r a
+runBlogsFromFolder folder = interpret \case
+    GetBlogs p' mtag -> do
+        getBlogsIO folder
             <&> filter (\b -> maybe True (`elem` (b ^. #content % #tags)) mtag)
-            <&> sortOn (Down . view #date)
+            <&> sortOn (Down . view (#content % #date))
             <&> drop (10 * p')
             <&> take 10
-
-    getBlog f = BlogsFromFolder $ do
-        fp <- awaits @"folder" $ \folder -> folder <> "/" <> f <> ".yml"
-        mcnt <- liftIO . catchAny (Just <$> readFileText (toString fp)) $ const (pure Nothing)
-        fmap join . forM mcnt $ \cnt -> katipAddContext (sl "file-content" cnt) $ do
-            $logTM DebugS "read file"
-            case decodeEither' (encodeUtf8 cnt) of
-                Left e -> katipAddContext (sl "error" (show @Text e)) $ do
-                    $logTM ErrorS "decoding failed"
-                    pure Nothing
-                Right x -> do
-                    d <- getModificationTime (toString fp)
-                    pure $ Just $ BlogEntry{content = x, path = f, date = d}
-
-newtype BlogsFromRepo m a = BlogsFromRepo {unBlogsFromRepo :: m a}
-    deriving (Functor, Applicative, Monad, MonadIO)
-
-instance (Monad m, HasSource "repo" Text m) => HasBlogs (BlogsFromRepo m) where
-    getBlogs _ _ = BlogsFromRepo $ await @"repo" *> undefined
-
-    getBlog _ = BlogsFromRepo $ await @"repo" *> undefined
-
-instance (Monad m, HasSource "repo" Text m) => HasSource "tags" [Text] (BlogsFromRepo m) where
-    await_ _ = BlogsFromRepo $ await @"repo" *> undefined
-
-newtype BlogsFromSource m a = BlogsFromSource (m a)
-    deriving (Functor, Applicative, Monad, MonadIO)
-
-withFolderOrRepo ::
-    forall m a.
-    (Monad m, KatipContext m, HasSource "blogSource" BlogSource m) =>
-    (forall m'. (HasBlogs m', HasSource "tags" [Text] m') => m' a) ->
-    m a
-withFolderOrRepo withEither =
-    await @"blogSource" >>= \case
-        Folder f ->
-            interpret @"folder" @'[KatipContext]
-                (ReifiedSource $ pure f)
-                (unBlogsFromFolder withEither)
-        Github r ->
-            interpret_ @"repo"
-                (ReifiedSource $ pure r)
-                (unBlogsFromRepo withEither)
-
-instance
-    (Monad m, HasSource "blogSource" BlogSource m, KatipContext m) =>
-    HasBlogs (BlogsFromSource m)
-    where
-    getBlogs p' mtag = BlogsFromSource $ withFolderOrRepo (getBlogs p' mtag)
-
-    getBlog f' = BlogsFromSource $ withFolderOrRepo (getBlog f')
-
-instance
-    (Monad m, HasSource "blogSource" BlogSource m, KatipContext m) =>
-    HasSource "tags" [Text] (BlogsFromSource m)
-    where
-    await_ _ = BlogsFromSource $ withFolderOrRepo (await @"tags")
+    GetBlog f -> getBlogIO folder f
