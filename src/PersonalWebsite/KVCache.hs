@@ -21,7 +21,7 @@ runKVWithCache ::
 runKVWithCache hash cache maxSize = interpret \case
     LookupKV k -> spanWithKey "LookupKV" k (embed . lookup cache)
     UpdateKV k Nothing -> spanWithKey "DeleteKV" k (embed . delete cache)
-    UpdateKV k (Just v) -> spanWithKey "InsertKV" k \hashedKey -> embed $ do
+    UpdateKV k (Just v) -> spanWithKey "InsertKV" k \hashedKey -> embed do
         insert cache hashedKey v
         s <- size cache
         when (s > maxSize) (purgeExpired cache)

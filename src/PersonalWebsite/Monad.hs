@@ -28,7 +28,7 @@ withLogEnv a = do
                 stdout
                 (permitItem DebugS)
                 V2
-    let makeLogEnv = embed $ do
+    let makeLogEnv = embed do
             le <- initLogEnv "PersonalWebsite" "production"
             registerScribe "stdout" handleScribe defaultScribeSettings le
     bracket makeLogEnv (embed . closeScribes) \le -> runKatipContext le mempty "PersonalWebsite" a

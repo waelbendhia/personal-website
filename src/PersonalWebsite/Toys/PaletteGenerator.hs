@@ -31,7 +31,7 @@ mkSample className = do
     sampleCodeStyle <- askCodeStyle
     sampleBlog <- mkSampleBlog
     bg' <- getBG
-    pure $ do
+    pure do
         style . toMarkup . C.render $
             fromString ("." <> className) C.? ".sample" C.& do
                 C.pointerEvents C.none
@@ -61,7 +61,7 @@ offsetBGBy d c =
 mkPageCSS :: Member (Reader ColorSeed) r => Sem r C.Css
 mkPageCSS = do
     bg' <- shiftBG <$> getBG
-    pure $ do
+    pure do
         ".try-title" <> ".palette-title" C.? do
             C.display C.flex
             C.maxWidth (C.px 768)
@@ -99,11 +99,11 @@ colorGeneratorPage mSeed = do
     pageCSS <- mkPageCSS
     testPalette <- forM mSeed \case
         Seed s -> local (const s) $ mkPalette True
-        IncorrectSeed t -> pure . span $ do
+        IncorrectSeed t -> pure $ span do
             "Bad Seed"
             seedLink
             toMarkup $ " " <> t
-    pure . div $ do
+    pure $ div do
         style . toMarkup $ C.render pageCSS
         h1 "Current palette"
         currentPalette
@@ -116,8 +116,7 @@ colorGeneratorPage mSeed = do
     tryForm =
         form
             ! A.method "GET"
-            ! A.action
-                (fromLink $ apiLink (Proxy @ColorGeneratorAPI) Nothing)
+            ! A.action (fromLink $ apiLink (Proxy @ColorGeneratorAPI) Nothing)
             $ do
                 input ! A.type_ "submit" ! A.value "try with seed"
                 input

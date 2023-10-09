@@ -24,4 +24,4 @@ blogsHandler = pageBlogsHandler :<|> tagsHandler :<|> blogHandler
     pageBlogsHandler page = renderSite Blog <=< blogsPage (fromMaybe 0 page)
     tagsHandler = renderSite Blog =<< tagsPage
     blogHandler =
-        maybe (renderSite None lostPage) (renderSite Blog <=< renderBlogEntry) <=< getBlog
+        maybe (renderSite None lostPage) (renderSite Blog <=< renderBlogEntry True) <=< getBlog

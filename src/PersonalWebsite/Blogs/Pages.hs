@@ -5,10 +5,10 @@ module PersonalWebsite.Blogs.Pages (
     tagsPage,
 ) where
 
-import Data.Text hiding (span)
-import qualified Data.Text as T hiding (span)
+import Data.Text hiding (elem, find, span)
+import qualified Data.Text as T hiding (elem, find, span)
 import Data.Time
-import Optics hiding (pre)
+import Optics hiding (Empty, pre)
 import PersonalWebsite.API
 import PersonalWebsite.Blogs.API
 import PersonalWebsite.Blogs.Capabilities
@@ -19,6 +19,8 @@ import Polysemy
 import Polysemy.Input
 import Relude hiding (div, span)
 import qualified Text.Blaze.Html5.Attributes as A
+import Text.Blaze.Internal
+import Text.Blaze.Renderer.String
 import Text.Blaze.XHtml5
 
 truncateMD :: Int -> [Text] -> [Text]
@@ -40,7 +42,7 @@ blogsLink p' t =
 
 toSummary :: Member Render r => BlogEntry -> Sem r Html
 toSummary be =
-    renderBlogEntry (be & #content % #content %~ truncateMD 13) <&> \body' ->
+    renderBlogEntry False (be & #content % #content %~ truncateMD 13) <&> \body' ->
         div ! A.class_ "blog-item" $ do
             div ! A.class_ "summary" $ body'
             div ! A.class_ "link-row" $
@@ -50,17 +52,50 @@ toSummary be =
 renderTag :: Text -> Html
 renderTag t = a ! blogsLink Nothing (Just t) ! A.class_ "tag" $ toMarkup t
 
-renderBlogEntry :: Member Render r => BlogEntry -> Sem r Html
-renderBlogEntry be =
+getHeadingLevel :: StaticString -> Maybe Int
+getHeadingLevel t = snd <$> find (\(h, _) -> h == tAsText) headings
+  where
+    tAsText = getText t
+    headings = [1 .. 6] <&> \n -> ("h" <> show n, n)
+
+extractText :: MarkupM a -> Text
+extractText (Parent _ _ _ ns) = extractText ns
+extractText (CustomParent _ ns) = extractText ns
+extractText (Content s _) = toText $ fromChoiceString s ""
+extractText (Append x y) = extractText x <> extractText y
+extractText (AddAttribute _ _ _ ns) = extractText ns
+extractText (AddCustomAttribute _ _ ns) = extractText ns
+extractText _ = ""
+
+getHeadings :: MarkupM a -> [(Int, Text)]
+getHeadings (Parent t _ _ ns) = fromMaybe (getHeadings ns) $ getHeadingLevel t <&> \lvl -> [(lvl, extractText ns)]
+-- Maybe check this as well
+getHeadings (CustomParent _ ns) = getHeadings ns
+getHeadings (Append x y) = getHeadings x <> getHeadings y
+getHeadings (AddAttribute _ _ _ ns) = getHeadings ns
+getHeadings (AddCustomAttribute _ _ ns) = getHeadings ns
+getHeadings _ = []
+
+renderTOC :: [Html] -> Html
+renderTOC doc = ul ! A.class_ "toc" $ do
+    h3 "Contents"
+    forM_ (getHeadings =<< doc) \(lvl, t) ->
+        li ! A.class_ ("level-" <> show lvl) $
+            a ! A.href (fromText $ "#" <> t) $
+                text t
+
+renderBlogEntry :: Member Render r => Bool -> BlogEntry -> Sem r Html
+renderBlogEntry withTOC be =
     mapM renderMarkdown (be ^. #content % #content) <&> \body' -> do
         h2 $ toMarkup $ be ^. #content % #title
         div ! A.class_ "metadata" $ do
-            div $ do
+            div do
                 toMarkup $ formatTime defaultTimeLocale "%B %e %Y" (be ^. #content % #date)
                 br
                 "Last modified on "
                 toMarkup $ formatTime defaultTimeLocale "%B %e %Y" (be ^. #editDate)
             div ! A.class_ "tags" $ mapM_ renderTag (be ^. #content % #tags)
+        when withTOC $ renderTOC body'
         sequence_ body'
 
 pager :: (Foldable t) => Int -> t a -> Html
@@ -74,7 +109,7 @@ pager p' bs = div ! A.class_ "pager" $ do
 renderTagHeader :: Text -> Html
 renderTagHeader t = div ! A.class_ "tag-header" $ do
     h1 $ "Posts about " *> (span ! A.class_ "tag") (toMarkup t) *> "."
-    p $ do
+    p do
         "View "
         a ! blogsLink Nothing Nothing $ "all posts"
         "."

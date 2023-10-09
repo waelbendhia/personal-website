@@ -60,7 +60,7 @@ getBlogIO ::
     Text ->
     Text ->
     Sem r (Maybe BlogEntry)
-getBlogIO folder fn = katipAddContext (sl "file-path" fp) $ do
+getBlogIO folder fn = katipAddContext (sl "file-path" fp) do
     mblog <- lookupKV fp
     case mblog of
         Nothing -> inSpan' "readBlogFromFile" Otel.defaultSpanArguments readBlogFromFile
@@ -81,13 +81,13 @@ getBlogIO folder fn = katipAddContext (sl "file-path" fp) $ do
                     (Right <$> readFileText (toString fp))
                     (pure . Left)
         case ecnt of
-            Left ex -> katipAddContext (sl "error" (show @Text ex)) $ do
+            Left ex -> katipAddContext (sl "error" (show @Text ex)) do
                 $logTM ErrorS "could not get blog"
                 pure Nothing
-            Right cnt -> katipAddContext (sl "file-path" fp) $ do
+            Right cnt -> katipAddContext (sl "file-path" fp) do
                 $logTM DebugS "read file"
                 case decodeEither' (encodeUtf8 cnt) of
-                    Left e -> katipAddContext (sl "error" (show @Text e)) $ do
+                    Left e -> katipAddContext (sl "error" (show @Text e)) do
                         $logTM ErrorS "decoding failed"
                         pure Nothing
                     Right x -> do

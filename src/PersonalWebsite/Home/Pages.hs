@@ -15,7 +15,7 @@ import Text.Blaze.XHtml5
 introBlock :: Html
 introBlock = div ! A.class_ "intro-block" $ do
     p "Hello. I'm Wael. This is my personal website. "
-    p $ do
+    p do
         "I'll be posting things here about various topics. "
         "I write mostly about programming, mainly about "
         tagLink "Haskell"
@@ -36,7 +36,7 @@ introBlock = div ! A.class_ "intro-block" $ do
 homePage :: Member Render r => Maybe BlogEntry -> Sem r Html
 homePage be = do
     b' <- mapM toSummary be
-    pure $ do
+    pure do
         div introBlock
         h1 "Newest blog"
         div ! A.class_ "blog-list" $

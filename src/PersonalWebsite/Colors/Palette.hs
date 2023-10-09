@@ -46,7 +46,7 @@ instance ToJSON Palette where
             ]
 
 randomPalette :: RandomGen g => g -> (Palette, g)
-randomPalette g = withRandom g $ do
+randomPalette g = withRandom g do
     (bgh, bgs, bgl) <- randomRM ((0, 0, 0), (255, 100, 100))
     Palette
         (Hsla bgh bgs bgl 1)

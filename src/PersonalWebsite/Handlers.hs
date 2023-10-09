@@ -3,6 +3,7 @@ module PersonalWebsite.Handlers (API, server, api) where
 import Network.HTTP.Types hiding (Header)
 import Network.Wai (responseLBS)
 import PersonalWebsite.API
+import PersonalWebsite.About
 import PersonalWebsite.Blogs
 import PersonalWebsite.Colors
 import PersonalWebsite.Cookies
@@ -23,6 +24,7 @@ server ::
 server sess =
     hoistServer (Proxy @APIWithoutPalette) (runReader seed') $
         homeHandler
+            :<|> aboutHandler
             :<|> blogsHandler
             :<|> toysHandler
             :<|> paletteHandler

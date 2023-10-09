@@ -25,6 +25,9 @@ library
     Application
     PersonalWebsite.API
     PersonalWebsite.API.CSS
+    PersonalWebsite.About
+    PersonalWebsite.About.API
+    PersonalWebsite.About.Pages
     PersonalWebsite.Blogs
     PersonalWebsite.Blogs.API
     PersonalWebsite.Blogs.Capabilities

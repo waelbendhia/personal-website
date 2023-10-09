@@ -6,7 +6,7 @@ import PersonalWebsite.Colors hiding (background)
 import PersonalWebsite.Internal
 import Polysemy
 import Polysemy.Reader
-import Relude hiding (Reader, ask, div, (&), (**))
+import Relude hiding (Reader, ask, div, rem, (&), (**))
 
 serifFont :: Css
 serifFont = fontFamily ["Iosevka Etoile"] [serif]
@@ -132,11 +132,19 @@ mkBaseStyle :: Members '[Reader ColorSeed] r => Sem r Css
 mkBaseStyle = do
     plt <- askColorPalette
     styles <- sequence [mkBlogStyle, mkCodeStyle]
-    pure $ do
+    pure do
         color (plt ^. #fg1)
         sequence_ styles
         tagsStyle
         input ? ".no-display" & display none
+        ".toc" ? do
+            padding (rem 0.5) (rem 1) (rem 1) (rem 1)
+            li <? do
+                forM_ [1 :: Int .. 6] \lvl ->
+                    byClass ("level-" <> show lvl) & paddingLeft (rem $ fromIntegral lvl)
+                marginBottom (rem 0.4)
+                listStyleType none
+                fontSize (rem 1.2)
         "input[type=text]" ? paddingLeft (px 12)
         "input[type=submit]" ? ":hover" & do
             color (plt ^. #primary)
@@ -216,7 +224,7 @@ mkBaseStyle = do
                 maxWidth (px 1024)
                 margin (px 0) auto (px 0) auto
                 p ? marginBottom (px 32)
-                h1 <> h2 <> h3 <> h4 <> p <> ".metadata" ? do
+                h1 <> h2 <> h3 <> h4 <> p <> li <> ".metadata" ? do
                     maxWidth (px 768)
                     marginLeft auto
                     marginRight auto

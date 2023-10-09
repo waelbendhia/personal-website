@@ -170,7 +170,12 @@ runRenderViaPandoc opts = interpret \case
     RenderMarkdown i -> do
         x <- inSpan' "readMarkdonw" Otel.defaultSpanArguments $ P.readMarkdown opts i
         inSpan' "writeHtml5" Otel.defaultSpanArguments $
-            P.writeHtml5 P.def{P.writerHighlightStyle = Just P.zenburn} x
+            P.writeHtml5
+                P.def
+                    { P.writerTableOfContents = True
+                    , P.writerHighlightStyle = Just P.zenburn
+                    }
+                x
 
 renderWithCache ::
     Members [Render, Embed IO, KVStore Text Html] r =>

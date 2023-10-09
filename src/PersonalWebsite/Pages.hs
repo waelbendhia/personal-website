@@ -13,7 +13,7 @@ import Text.Blaze.Html5
 import qualified Text.Blaze.Html5.Attributes as A
 
 lostPage :: Html
-lostPage = (div ! A.class_ "lost") . p $ do
+lostPage = (div ! A.class_ "lost") $ p do
     span "You seem lost, why don't you navigate your way back "
     a ! A.href (fromLink $ apiLink (Proxy @HomeAPI)) $ "home"
     span "."

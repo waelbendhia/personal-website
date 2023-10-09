@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Application (runApp) where
+module Application (runApp, configParser) where
 
 import qualified Crypto.Hash.SHA512 as SHA512
 import qualified Data.Cache as C
@@ -98,7 +98,8 @@ mkApplication renderCache blogCache stateIORef env src = KW.middleware DebugS \r
                                 }
                         . renderWithCache
                         . traceRender
-                        . runTagsFromFolder src)
+                        . runTagsFromFolder src
+                    )
                     server
     embed $ hoistedApp req (runM . runResource . runTracing tp . runKatipContext le lc ns . send')
 
@@ -109,11 +110,10 @@ withTraceProvider a =
         (embed @IO . T.shutdownTracerProvider)
         (`runTracing` a)
 
-runApp :: IO ()
-runApp = void $ do
-    ApplicationConfig p src <- execParser $ info configParser fullDesc
+runApp :: ApplicationConfig -> IO ()
+runApp (ApplicationConfig p src) = void do
     env <- fromList . fmap (bimap toText toText) <$> getEnvironment
-    runM . runResource . withLogEnv . withTraceProvider $ do
+    runM . runResource . withLogEnv $ withTraceProvider do
         le <- getLogEnv
         lc <- getKatipContext
         ns <- getKatipNamespace
