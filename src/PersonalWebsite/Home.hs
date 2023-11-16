@@ -13,6 +13,9 @@ import Polysemy
 import Polysemy.Reader
 import Relude hiding (MonadReader, Reader, ask, local)
 import Servant
+import Polysemy.Input
 
-homeHandler :: Members '[Blogs, Render, Reader ColorSeed] r => ServerT HomeAPI (Sem r)
+homeHandler ::
+    (Members '[Blogs, Render, Reader ColorSeed, Input Int] r) =>
+    ServerT HomeAPI (Sem r)
 homeHandler = renderSite Home =<< homePage . viaNonEmpty head =<< getBlogs 0 Nothing

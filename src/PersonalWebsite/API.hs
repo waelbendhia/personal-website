@@ -10,7 +10,12 @@ import Relude hiding (MonadReader, ask, local)
 import Servant
 
 type APIWithoutPalette =
-    HomeAPI :<|> AboutAPI :<|> BlogsAPI :<|> ToysAPI :<|> PaletteAPI :<|> Raw
+    HomeAPI
+        :<|> AboutAPI
+        :<|> BlogsAPI
+        :<|> ToysAPI
+        :<|> PaletteAPI
+        :<|> Raw
 
 type API = Header "Cookie" SessionData :> APIWithoutPalette
 

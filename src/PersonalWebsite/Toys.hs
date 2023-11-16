@@ -13,6 +13,7 @@ import PersonalWebsite.Pandoc
 import PersonalWebsite.Toys.API
 import PersonalWebsite.Toys.PaletteGenerator
 import Polysemy
+import Polysemy.Input
 import Polysemy.Reader
 import Relude hiding (Reader, ask, div)
 import Servant
@@ -34,7 +35,7 @@ instance ToMarkup Toys where
                     , apiLink (Proxy @ColorGeneratorAPI) Nothing
                     )
 
-mkToysStyle :: Member (Reader ColorSeed) r => Sem r C.Css
+mkToysStyle :: (Member (Reader ColorSeed) r) => Sem r C.Css
 mkToysStyle =
     askColorPalette <&> \plt ->
         C.a C.? ".single-toy" C.& do
@@ -51,7 +52,7 @@ mkToysStyle =
                 C.borderColor (plt ^. #primary)
                 C.background $ setTransparency 0.4 (plt ^. #primary)
 
-mkToysPage :: Member (Reader ColorSeed) r => Sem r Html
+mkToysPage :: (Member (Reader ColorSeed) r) => Sem r Html
 mkToysPage =
     mkToysStyle <&> \toysStyle -> do
         style $ toMarkup $ C.render toysStyle
@@ -60,8 +61,10 @@ mkToysPage =
             "Some of these might have blog posts going more in depth into how they work."
         div ! A.class_ "toys-container" $ mapM_ toMarkup (universe @Toys)
 
-colorGeneratorHandler :: Members [Reader ColorSeed, Render] r => ServerT ColorGeneratorAPI (Sem r)
+colorGeneratorHandler ::
+    (Members [Reader ColorSeed, Render, Input Int] r) =>
+    ServerT ColorGeneratorAPI (Sem r)
 colorGeneratorHandler = renderSite Toys <=< colorGeneratorPage
 
-toysHandler :: Members [Reader ColorSeed, Render] r => ServerT ToysAPI (Sem r)
+toysHandler :: (Members [Reader ColorSeed, Render, Input Int] r) => ServerT ToysAPI (Sem r)
 toysHandler = colorGeneratorHandler :<|> (renderSite Toys =<< mkToysPage)

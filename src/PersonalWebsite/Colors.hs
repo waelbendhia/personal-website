@@ -28,7 +28,7 @@ setTransparency _ o = o
 seedToPalette :: ColorSeed -> Palette
 seedToPalette = fst . randomPalette . mkStdGen . coerce
 
-askColorPalette :: Members '[Reader ColorSeed] r => Sem r Palette
+askColorPalette :: (Members '[Reader ColorSeed] r) => Sem r Palette
 askColorPalette = asks seedToPalette
 
 setPaletteHeaders :: ColorSeed -> Maybe Text -> v -> SetPaletteHeaders v
@@ -40,7 +40,7 @@ setPaletteHeaders colorSeed ref =
                 }
      in addHeader newCookie . addHeader (fromMaybe "" ref)
 
-paletteHandler :: MonadIO m => ServerT PaletteAPI m
+paletteHandler :: (MonadIO m) => ServerT PaletteAPI m
 paletteHandler = setSeedHandler :<|> randomizeHandler
   where
     setSeedHandler ref s = pure $ setPaletteHeaders (coerce s) ref ""

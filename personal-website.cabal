@@ -1,19 +1,18 @@
-cabal-version:      1.12
+cabal-version:      2.2
 name:               personal-website
 version:            0.1.0.0
 description:
   Please see the README on GitHub at <https://github.com/githubuser/personal-website#readme>
 
-homepage:           https://github.com/githubuser/personal-website#readme
-bug-reports:        https://github.com/githubuser/personal-website/issues
-author:             Author name here
-maintainer:         example@example.com
-copyright:          2022 Author name here
-license:            BSD3
+license:            BSD-3-Clause
 license-file:       LICENSE
+author:             Wael Ben Dhia
+maintainer:         waelbendhia@gmail.com
+category:           Text
 build-type:         Simple
+extra-doc-files:    CHANGELOG.md
 extra-source-files:
-  ChangeLog.md
+  CHANGELOG.md
   README.md
 
 source-repository head
@@ -23,11 +22,11 @@ source-repository head
 library
   exposed-modules:
     Application
-    PersonalWebsite.API
-    PersonalWebsite.API.CSS
     PersonalWebsite.About
     PersonalWebsite.About.API
     PersonalWebsite.About.Pages
+    PersonalWebsite.API
+    PersonalWebsite.API.CSS
     PersonalWebsite.Blogs
     PersonalWebsite.Blogs.API
     PersonalWebsite.Blogs.Capabilities
@@ -54,6 +53,7 @@ library
     PersonalWebsite.Pages.Container
     PersonalWebsite.Pandoc
     PersonalWebsite.Random
+    PersonalWebsite.TH
     PersonalWebsite.Toys
     PersonalWebsite.Toys.API
     PersonalWebsite.Toys.PaletteGenerator
@@ -96,11 +96,12 @@ library
     UndecidableInstances
 
   ghc-options:
-    -Wall -Werror -Wcompat -Widentities -Wincomplete-uni-patterns
-    -Wpartial-fields -Wredundant-constraints
+    -Wall -Werror -Wwarn=missing-home-modules -Wcompat -Widentities
+    -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
 
   build-depends:
-      aeson
+    , aeson
+    , aeson-optics
     , attoparsec
     , base                                  >=4.7 && <5
     , base58-bytestring
@@ -128,12 +129,14 @@ library
     , pandoc
     , polysemy
     , polysemy-zoo
+    , process
     , random
     , relude
     , servant
     , servant-blaze
     , servant-server
     , skylighting
+    , template-haskell
     , text
     , time
     , unliftio
@@ -188,7 +191,7 @@ executable personal-website-exe
     -with-rtsopts=-N
 
   build-depends:
-      aeson
+    , aeson
     , attoparsec
     , base                  >=4.7 && <5
     , base58-bytestring
@@ -270,7 +273,7 @@ test-suite personal-website-test
     -with-rtsopts=-N
 
   build-depends:
-      aeson
+    , aeson
     , attoparsec
     , base                  >=4.7 && <5
     , base58-bytestring

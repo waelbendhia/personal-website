@@ -18,7 +18,9 @@ import Polysemy.Reader
 import Relude hiding (Reader)
 import Servant
 
-blogsHandler :: Members '[Blogs, Render, Input Tags, Reader ColorSeed] r => ServerT BlogsAPI (Sem r)
+blogsHandler ::
+    (Members '[Blogs, Render, Input Tags, Reader ColorSeed, Input Int] r) =>
+    ServerT BlogsAPI (Sem r)
 blogsHandler = pageBlogsHandler :<|> tagsHandler :<|> blogHandler
   where
     pageBlogsHandler page = renderSite Blog <=< blogsPage (fromMaybe 0 page)

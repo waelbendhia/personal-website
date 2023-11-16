@@ -1,6 +1,6 @@
 module PersonalWebsite.API.CSS (mkBaseStyle) where
 
-import Clay
+import Clay as Cl
 import Optics hiding (pre, (#), (&), (|>))
 import PersonalWebsite.Colors hiding (background)
 import PersonalWebsite.Internal
@@ -97,8 +97,8 @@ mkBlogStyle =
                         height (px 64)
                         position absolute
                         mapM_ ($ px 0) [bottom, left]
-                        background $
-                            linearGradient
+                        background
+                            $ linearGradient
                                 (angular $ deg 0)
                                 [(plt ^. #bg, 0), (transparent, 100)]
                         width (pct 100)
@@ -128,7 +128,7 @@ tagsStyle =
         "gap" -: "16px"
         "flex-wrap" -: "wrap"
 
-mkBaseStyle :: Members '[Reader ColorSeed] r => Sem r Css
+mkBaseStyle :: (Members '[Reader ColorSeed] r) => Sem r Css
 mkBaseStyle = do
     plt <- askColorPalette
     styles <- sequence [mkBlogStyle, mkCodeStyle]

@@ -21,11 +21,13 @@ import PersonalWebsite.Pandoc
 import PersonalWebsite.Tracing
 import Polysemy
 import Polysemy.Error
+import Polysemy.Input
 import Polysemy.Resource
 import Polysemy.State
 import Relude hiding (Reader, ask, evalState, runReader)
 import Servant
 import System.Environment
+import System.Random
 import Text.Blaze.Html
 import Text.Pandoc
 import qualified Text.Pandoc as P
@@ -63,12 +65,14 @@ mkApplication renderCache blogCache stateIORef env src = KW.middleware DebugS \r
     ns <- getKatipNamespace
     tp <- getTracerProvider
     let hoistedApp =
-            serve api $
-                hoistServer
+            serve api
+                $ hoistServer
                     api
                     ( Handler
                         . ExceptT
                         . runM
+                        . runInputSem
+                            (embed @IO $ randomRIO @Int (minInt, maxInt))
                         . runResource
                         . runTracing tp
                         . runError
@@ -103,7 +107,7 @@ mkApplication renderCache blogCache stateIORef env src = KW.middleware DebugS \r
                     server
     embed $ hoistedApp req (runM . runResource . runTracing tp . runKatipContext le lc ns . send')
 
-withTraceProvider :: Members [Embed IO, Resource] r => Sem (Tracing : r) a -> Sem r a
+withTraceProvider :: (Members [Embed IO, Resource] r) => Sem (Tracing : r) a -> Sem r a
 withTraceProvider a =
     bracket
         (embed T.initializeGlobalTracerProvider)
@@ -126,7 +130,11 @@ runApp (ApplicationConfig p src) = void do
                 KW.runApplication
                     (runM . runResource . runTracing tp . runKatipContext le lc ns)
                     (mkApplication renderCache blogCache stateIORef env src)
-        $logTM InfoS "application starting"
-        embed $ Warp.run p $ otelMiddleware app
+        hash <- Relude.lookupEnv "GIT_HASH"
+        katipAddContext
+            (sl "version" (fromMaybe "development" hash))
+            do
+                $logTM InfoS "application starting"
+                embed $ Warp.run p $ otelMiddleware app
   where
     expiration = 60 * 60 * ((10 :: Integer) ^ (9 :: Integer))

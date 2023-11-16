@@ -17,7 +17,7 @@ introBlock = div ! A.class_ "intro-block" $ do
     p "Hello. I'm Wael. This is my personal website. "
     p do
         "I'll be posting things here about various topics. "
-        "I write mostly about programming, mainly about "
+        "I image I'll write mostly about programming, mainly about "
         tagLink "Haskell"
         " or "
         tagLink "Go"

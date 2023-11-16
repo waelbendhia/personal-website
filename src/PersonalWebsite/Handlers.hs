@@ -16,25 +16,28 @@ import Polysemy.Input
 import Polysemy.Reader
 import Relude hiding (MonadReader, Reader, ask, local, runReader)
 import Servant
+import System.Random
 import Text.Blaze.Renderer.Utf8
 
 server ::
-    Members [Blogs, Render, Input Tags, Embed IO] r =>
+    (Members [Blogs, Render, Input Tags, Input Int, Embed IO] r) =>
     ServerT API (Sem r)
 server sess =
-    hoistServer (Proxy @APIWithoutPalette) (runReader seed') $
-        homeHandler
-            :<|> aboutHandler
-            :<|> blogsHandler
-            :<|> toysHandler
-            :<|> paletteHandler
-            :<|> pure notFoundHandler
+    hoistServer (Proxy @APIWithoutPalette) (runReader seed')
+        $ homeHandler
+        :<|> aboutHandler
+        :<|> blogsHandler
+        :<|> toysHandler
+        :<|> paletteHandler
+        :<|> pure notFoundHandler
   where
     seed' = coerce sess ?: ColorSeed 86
-    notFoundHandler _ res =
-        renderSite None lostPage
-            & runReader seed'
-            & run
-            & renderMarkup
-            & responseLBS status404 [("Content-Type", "text/html; charset=UTF-8")]
-            & res
+    notFoundHandler _ res = do
+        resp <-
+            runM
+                $ runInputSem (embed @IO $ randomRIO @Int (minInt, maxInt))
+                $ runReader seed'
+                $ renderSite None lostPage
+        res
+            $ responseLBS status404 [("Content-Type", "text/html; charset=UTF-8")]
+            $ renderMarkup resp
