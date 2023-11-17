@@ -1,10 +1,15 @@
-module PersonalWebsite.About.Pages (aboutPage, ParsedCV (..)) where
+module PersonalWebsite.About.Pages (
+    aboutPage,
+    ParsedCV (..),
+    justTheProjects,
+) where
 
 import qualified Clay as C
 import Data.Aeson.Optics
 import Data.List (nub)
 import Data.Yaml
 import Optics
+import PersonalWebsite.HTMX
 import Polysemy
 import Polysemy.Input as P
 import Relude hiding (div)
@@ -87,7 +92,7 @@ education cv = div do
     edus = cv ^.. key "education" % values
 
 projects :: Maybe Text -> Value -> Html
-projects selectedTag cv = div do
+projects selectedTag cv = (div ! A.id "projects") do
     h2 "Projects"
     div do
         forM_ selectedTag \t ->
@@ -97,13 +102,20 @@ projects selectedTag cv = div do
         br
         sequence_
             $ intersperse " "
-            $ (a ! A.href "?") "Any"
-            : (filterTag <$> techs)
+            $ tagLink Nothing
+            : (tagLink . Just <$> techs)
     h3 "Professional Projects"
     mapM_ renderProject proProjects
     h3 "Personal Projects"
     mapM_ renderProject personalProjects
   where
+    tagLink mt =
+        a
+            ! A.href ("?" <> maybe "" (("tag=" <>) . fromString . toString) mt)
+            ! hxSwap "outerHtml"
+            ! hxTarget "#projects"
+            $ text
+            $ fromMaybe "Any" mt
     techs =
         sort
             $ nub
@@ -117,7 +129,6 @@ projects selectedTag cv = div do
             % _Array
             % traversed
             % _String
-    filterTag t = a ! A.href ("?tag=" <> fromString (toString t)) $ text t
     filterProjects =
         selectedTag & maybe
             id
@@ -145,24 +156,40 @@ projects selectedTag cv = div do
         p $ text d
         mapM_ (p . text) o
 
+projectShowCase :: Html
+projectShowCase = div do
+    h1 "Showcase"
+    "Here's some things I've build in my free time"
+
+resumeOrCV :: Maybe Text -> Value -> Html
+resumeOrCV selectedTag cv = div do
+    h1 "Resume"
+    p do
+        "You can "
+        a
+            ! A.href "/public/wael-ben-dhia.pdf"
+            ! customAttribute "download" "wael-ben-dhia.pdf"
+            $ "download a neat résumé"
+        " or scroll down to read the entire CV."
+    div do
+        h2 "Summary"
+        mapM_
+            (mapM_ (p . fromString . toString) . lines)
+            (cv ^? key "generalInfo" % key "about" % key "short" % _String)
+    workExperience cv
+    education cv
+    projects selectedTag cv
+
 aboutPage :: (Members '[Input ParsedCV] r) => Maybe Text -> Sem r Html
 aboutPage selectedTag = do
     ParsedCV cv <- P.input
     pure do
         style $ toMarkup $ C.render pageStyle
         (div ! A.class_ "about-body") do
-            p do
-                "You can "
-                a
-                    ! A.href "/public/wael-ben-dhia.pdf"
-                    ! customAttribute "download" "wael-ben-dhia.pdf"
-                    $ "download a neat résumé"
-                " or scroll down to read the entire CV."
-            div do
-                h2 "Summary"
-                mapM_
-                    (mapM_ (p . fromString . toString) . lines)
-                    (cv ^? key "generalInfo" % key "about" % key "short" % _String)
-            workExperience cv
-            education cv
-            projects selectedTag cv
+            projectShowCase
+            resumeOrCV selectedTag cv
+
+justTheProjects :: (Members '[Input ParsedCV] r) => Maybe Text -> Sem r Html
+justTheProjects selectedTag = do
+    ParsedCV cv <- P.input
+    pure $ projects selectedTag cv

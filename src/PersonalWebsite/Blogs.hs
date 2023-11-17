@@ -19,7 +19,7 @@ import Relude hiding (Reader)
 import Servant
 
 blogsHandler ::
-    (Members '[Blogs, Render, Input Tags, Reader ColorSeed, Input Int] r) =>
+    (Members '[Blogs, Render, Input Tags, Reader ColorSeed, Input Int, Input IsHXRequest] r) =>
     ServerT BlogsAPI (Sem r)
 blogsHandler = pageBlogsHandler :<|> tagsHandler :<|> blogHandler
   where

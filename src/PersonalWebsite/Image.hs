@@ -10,3 +10,6 @@ instance Accept ICO where
 
 instance MimeRender ICO ByteString where
     mimeRender _ = fromStrict
+
+instance MimeRender ICO LByteString where
+    mimeRender _ = id

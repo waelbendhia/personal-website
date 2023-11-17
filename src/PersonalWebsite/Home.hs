@@ -10,12 +10,12 @@ import PersonalWebsite.Home.Pages
 import PersonalWebsite.Pages
 import PersonalWebsite.Pandoc
 import Polysemy
+import Polysemy.Input
 import Polysemy.Reader
 import Relude hiding (MonadReader, Reader, ask, local)
 import Servant
-import Polysemy.Input
 
 homeHandler ::
-    (Members '[Blogs, Render, Reader ColorSeed, Input Int] r) =>
+    (Members '[Blogs, Render, Reader ColorSeed, Input Int, Input IsHXRequest] r) =>
     ServerT HomeAPI (Sem r)
 homeHandler = renderSite Home =<< homePage . viaNonEmpty head =<< getBlogs 0 Nothing

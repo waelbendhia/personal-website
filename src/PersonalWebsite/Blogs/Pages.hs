@@ -13,6 +13,7 @@ import PersonalWebsite.API
 import PersonalWebsite.Blogs.API
 import PersonalWebsite.Blogs.Capabilities
 import PersonalWebsite.Blogs.Data
+import PersonalWebsite.HTMX
 import PersonalWebsite.Internal
 import PersonalWebsite.Pandoc
 import Polysemy
@@ -36,21 +37,22 @@ truncateMD maxLines = go 0
                     [takeNLines (maxLines - acc) l <> "\n```\n"]
                 else l : go (acc + numLines) ls
 
-blogsLink :: Maybe Int -> Maybe Text -> Attribute
-blogsLink p' t =
-    A.href (fromLink $ apiLink (Proxy @PageBlogsAPI) p' t)
+blogsLink :: Maybe Int -> Maybe Text -> AttributeValue
+blogsLink p' t = fromLink $ apiLink (Proxy @PageBlogsAPI) p' t
 
-toSummary :: Member Render r => BlogEntry -> Sem r Html
+toSummary :: (Member Render r) => BlogEntry -> Sem r Html
 toSummary be =
     renderBlogEntry False (be & #content % #content %~ truncateMD 13) <&> \body' ->
         div ! A.class_ "blog-item" $ do
             div ! A.class_ "summary" $ body'
-            div ! A.class_ "link-row" $
-                a ! A.href (fromLink $ apiLink (Proxy @BlogAPI) (be ^. #path)) $
+            div
+                ! A.class_ "link-row"
+                $ hxA
+                    (fromLink $ apiLink (Proxy @BlogAPI) (be ^. #path))
                     "GOTO"
 
 renderTag :: Text -> Html
-renderTag t = a ! blogsLink Nothing (Just t) ! A.class_ "tag" $ toMarkup t
+renderTag t = hxA (blogsLink Nothing (Just t)) ! A.class_ "tag" $ toMarkup t
 
 getHeadingLevel :: StaticString -> Maybe Int
 getHeadingLevel t = snd <$> find (\(h, _) -> h == tAsText) headings
@@ -67,24 +69,39 @@ extractText (AddAttribute _ _ _ ns) = extractText ns
 extractText (AddCustomAttribute _ _ ns) = extractText ns
 extractText _ = ""
 
-getHeadings :: MarkupM a -> [(Int, Text)]
-getHeadings (Parent t _ _ ns) = fromMaybe (getHeadings ns) $ getHeadingLevel t <&> \lvl -> [(lvl, extractText ns)]
--- Maybe check this as well
-getHeadings (CustomParent _ ns) = getHeadings ns
-getHeadings (Append x y) = getHeadings x <> getHeadings y
-getHeadings (AddAttribute _ _ _ ns) = getHeadings ns
-getHeadings (AddCustomAttribute _ _ ns) = getHeadings ns
-getHeadings _ = []
+getHeadings :: MarkupM a -> [(Int, Text, Text)]
+getHeadings = go Nothing
+  where
+    go :: Maybe Text -> MarkupM a -> [(Int, Text, Text)]
+    go (Just elemID) (Parent t _ _ ns) =
+        fromMaybe
+            (go (Just elemID) ns)
+            (getHeadingLevel t <&> \lvl -> [(lvl, extractText ns, elemID)])
+    go Nothing (Parent _ _ _ ns) = go Nothing ns
+    -- Maybe check this as well
+    go lastID (CustomParent _ ns) = go lastID ns
+    go lastID (Append x y) = go lastID x <> go lastID y
+    go lastID (AddAttribute rk k val ns) =
+        go
+            ( if getText rk == "id" || getText k == "id"
+                then Just (toText $ fromChoiceString val "")
+                else lastID
+            )
+            ns
+    go lastID (AddCustomAttribute _ _ ns) = go lastID ns
+    go _ _ = []
 
 renderTOC :: [Html] -> Html
 renderTOC doc = ul ! A.class_ "toc" $ do
     h3 "Contents"
-    forM_ (getHeadings =<< doc) \(lvl, t) ->
-        li ! A.class_ ("level-" <> show lvl) $
-            a ! A.href (fromText $ "#" <> t) $
-                text t
+    forM_ (getHeadings =<< doc) \(lvl, t, elemID) ->
+        li
+            ! A.class_ ("level-" <> show lvl)
+            $ a
+            ! A.href (fromText $ "#" <> elemID)
+            $ text t
 
-renderBlogEntry :: Member Render r => Bool -> BlogEntry -> Sem r Html
+renderBlogEntry :: (Member Render r) => Bool -> BlogEntry -> Sem r Html
 renderBlogEntry withTOC be =
     mapM renderMarkdown (be ^. #content % #content) <&> \body' -> do
         h2 $ toMarkup $ be ^. #content % #title
@@ -104,30 +121,32 @@ pager p' bs = div ! A.class_ "pager" $ do
     div $ "page " <> show (p' + 1)
     condA (Relude.length bs < 10) succ "forward"
   where
-    condA cond d = a !? (cond, A.class_ "disabled") ! blogsLink (Just $ d p') Nothing
+    condA cond d = hxA (blogsLink (Just $ d p') Nothing) !? (cond, A.class_ "disabled")
 
 renderTagHeader :: Text -> Html
 renderTagHeader t = div ! A.class_ "tag-header" $ do
     h1 $ "Posts about " *> (span ! A.class_ "tag") (toMarkup t) *> "."
     p do
         "View "
-        a ! blogsLink Nothing Nothing $ "all posts"
+        hxA (blogsLink Nothing Nothing) "all posts"
         "."
         br
         "See "
-        a ! A.href (fromLink $ apiLink (Proxy @TagsAPI)) $ "all tags"
+        hxA (fromLink $ apiLink (Proxy @TagsAPI)) "all tags"
         "."
 
 blogsPage ::
-    Members '[Blogs, Render] r =>
+    (Members '[Blogs, Render] r) =>
     Int ->
     Maybe Text ->
     Sem r Html
 blogsPage p' mtag = do
     bs <- getBlogs p' mtag
     summaries <- mapM toSummary bs
-    pure $
-        div ! A.class_ "blog-list" $ do
+    pure
+        $ div
+        ! A.class_ "blog-list"
+        $ do
             pager p' bs
             mapM_ renderTagHeader mtag
             sequence_ . Relude.intersperse (div ! A.class_ "seperator" $ pass) $ summaries

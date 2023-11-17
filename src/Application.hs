@@ -35,20 +35,10 @@ import qualified Text.Pandoc as P
 
 data ApplicationConfig = ApplicationConfig
     { port :: !Int
-    , source :: !Text
     , staticAssets :: !Text
     , publicFolder :: !Text
     }
     deriving (Show)
-
-sourceParser :: Parser Text
-sourceParser =
-    strOption
-        ( long "blogs-folder"
-            <> short 'b'
-            <> help "folder containing blog posts"
-            <> showDefault
-        )
 
 staticAssetsParser :: Parser Text
 staticAssetsParser =
@@ -79,7 +69,6 @@ configParser =
                 <> value 8081
                 <> showDefault
             )
-        <*> sourceParser
         <*> staticAssetsParser
         <*> publicAssetsParser
 
@@ -88,7 +77,6 @@ data AppContext = AppContext
     , blogCache :: !(C.Cache ByteString (UTCTime, BlogEntry))
     , stateIORef :: !(IORef CommonState)
     , env :: !(Map Text Text)
-    , blogsFolder :: !Text
     , staticFolder :: !Text
     , publicFolder :: !Text
     }
@@ -102,7 +90,6 @@ mkApplication
             , blogCache = blogCache'
             , stateIORef = stateIORef'
             , env = env'
-            , blogsFolder = blogs'
             , staticFolder = static'
             , publicFolder = public'
             }
@@ -135,7 +122,7 @@ mkApplication
                                     blogCache'
                                     1024
                                 . runInputCV static'
-                                . runBlogsFromFolder blogs'
+                                . runBlogsFromFolder static'
                                 . traceBlogs
                                 . runKVWithCache @Text @Html
                                     (SHA512.hash . encodeUtf8)
@@ -148,11 +135,12 @@ mkApplication
                                                 [ P.Ext_backtick_code_blocks
                                                 , P.Ext_fenced_code_attributes
                                                 , P.Ext_fenced_code_blocks
+                                                , P.Ext_header_attributes
                                                 ]
                                         }
                                 . renderWithCache
                                 . traceRender
-                                . runTagsFromFolder blogs'
+                                . runTagsFromFolder static'
                             )
                             (server public')
             embed $ hoistedApp req (runM . runResource . runTracing tp . runKatipContext le lc ns . send')
@@ -165,7 +153,7 @@ withTraceProvider a =
         (`runTracing` a)
 
 runApp :: ApplicationConfig -> IO ()
-runApp (ApplicationConfig p blogs' static' public') = void do
+runApp (ApplicationConfig p static' public') = void do
     env' <- fromList . fmap (bimap toText toText) <$> getEnvironment
     runM . runResource . withLogEnv $ withTraceProvider do
         le <- getLogEnv
@@ -183,7 +171,7 @@ runApp (ApplicationConfig p blogs' static' public') = void do
         let app =
                 KW.runApplication
                     (runM . runResource . runTracing tp . runKatipContext le lc ns)
-                    (mkApplication $ ctx env' blogs' static' public')
+                    (mkApplication $ ctx env' static' public')
         hash <- Relude.lookupEnv "GIT_HASH"
         katipAddContext
             (sl "version" (fromMaybe "development" hash))

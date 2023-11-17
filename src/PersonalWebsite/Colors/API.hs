@@ -13,8 +13,7 @@ import Text.Blaze.Html
 import Web.Cookie
 import Web.FormUrlEncoded
 
-type SetPaletteHeaders v =
-    Headers '[Header "Set-Cookie" SetCookie, Header "Location" Text] v
+type SetPaletteHeaders v = Headers '[Header "Set-Cookie" SetCookie] v
 
 newtype Seed = Seed Int
 
@@ -25,11 +24,11 @@ type SetSeedAPI =
     "set-seed"
         :> Header "referer" Text
         :> ReqBody '[FormUrlEncoded] Seed
-        :> Verb 'POST 303 '[HTML] (SetPaletteHeaders Html)
+        :> Post '[HTML] (SetPaletteHeaders Html)
 
 type RandomizeAPI =
     "randomize"
         :> Header "referer" Text
-        :> Verb 'POST 303 '[HTML] (SetPaletteHeaders Html)
+        :> Post '[HTML] (SetPaletteHeaders Html)
 
 type PaletteAPI = SetSeedAPI :<|> RandomizeAPI

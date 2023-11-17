@@ -2,6 +2,7 @@ module PersonalWebsite.Colors.Conversion where
 
 import Clay hiding (b, p, q, round, s)
 import Data.Bits
+import Graphics.Image
 import PersonalWebsite.Internal
 import Relude
 import qualified Skylighting as Sk
@@ -27,10 +28,10 @@ hslToRgb (h, s, l)
                 | t > 1 = t - 1
                 | otherwise = t
          in if
-                    | t' < 1 / 6 -> p + ((q - p) * 6 * t')
-                    | t' < 1 / 2 -> q
-                    | t' < 2 / 3 -> p + ((q - p) * (2 / 3 - t') * 6)
-                    | otherwise -> p
+                | t' < 1 / 6 -> p + ((q - p) * 6 * t')
+                | t' < 1 / 2 -> q
+                | t' < 2 / 3 -> p + ((q - p) * (2 / 3 - t') * 6)
+                | otherwise -> p
 
 clayToSkylighting :: Color -> Maybe Sk.Color
 clayToSkylighting (Rgba r g b _) =
@@ -42,3 +43,10 @@ clayToSkylighting _ = Nothing
 
 skylightingToClay :: Sk.Color -> Color
 skylightingToClay (Sk.RGB r g b) = (rgb `on3` fromIntegral) r g b
+
+clayColorToPixelRGB :: Color -> Pixel RGB Integer
+clayColorToPixelRGB (Rgba r g b _) = PixelRGB r g b
+clayColorToPixelRGB (Hsla h s l _) =
+    let (r, g, b) = hslToRgb (h, s, l)
+     in clayColorToPixelRGB $ rgba r g b 1
+clayColorToPixelRGB _ = PixelRGB 0 0 0

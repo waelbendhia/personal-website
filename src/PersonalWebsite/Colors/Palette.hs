@@ -1,5 +1,6 @@
 module PersonalWebsite.Colors.Palette (
-    Palette (..),
+    Palette_ (..),
+    Palette,
     randomPalette,
     clayToText,
 ) where
@@ -25,15 +26,29 @@ clayToText (Hsla h s l _) =
      in clayToText $ rgba r g b 1
 clayToText c = plain $ unValue $ value c
 
-data Palette = Palette
-    { bg :: Color
-    , fg1 :: Color
-    , fg2 :: Color
-    , primary :: Color
-    , highlight :: Color
+data Palette_ val = Palette
+    { bg :: !val
+    , bgTransparent :: !val
+    , fg1 :: !val
+    , fg2 :: !val
+    , primary :: !val
+    , highlight :: !val
     }
 
-makeFieldLabelsWith noPrefixFieldLabels ''Palette
+type Palette = Palette_ Color
+
+makeFieldLabelsWith noPrefixFieldLabels ''Palette_
+
+instance Functor Palette_ where
+    fmap f plt =
+        Palette
+            { bg = f (plt ^. #bg)
+            , bgTransparent = f (plt ^. #bgTransparent)
+            , fg1 = f (plt ^. #fg1)
+            , fg2 = f (plt ^. #fg2)
+            , primary = f (plt ^. #primary)
+            , highlight = f (plt ^. #highlight)
+            }
 
 instance ToJSON Palette where
     toJSON p =
@@ -45,11 +60,12 @@ instance ToJSON Palette where
             , "highlight" .= clayToText (p ^. #highlight)
             ]
 
-randomPalette :: RandomGen g => g -> (Palette, g)
+randomPalette :: (RandomGen g) => g -> (Palette, g)
 randomPalette g = withRandom g do
     (bgh, bgs, bgl) <- randomRM ((0, 0, 0), (255, 100, 100))
     Palette
         (Hsla bgh bgs bgl 1)
+        (Hsla bgh bgs bgl 0.7)
         <$> randomHSLAColorJitter (bgh + 120, bgs / 2, bgl + 50) (10, 10, 5)
         <*> randomHSLAColorJitter (bgh + 120, bgs, bgl + 30) (10, 10, 10)
         <*> randomHSLAColorJitter (bgh + 90, bgs, bgl + 50) (10, 10, 5)

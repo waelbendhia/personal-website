@@ -7,6 +7,7 @@ import qualified Clay as C
 import Optics ((^.))
 import PersonalWebsite.API
 import PersonalWebsite.Colors
+import PersonalWebsite.HTMX
 import PersonalWebsite.Internal
 import PersonalWebsite.Pages
 import PersonalWebsite.Pandoc
@@ -23,7 +24,7 @@ import qualified Text.Blaze.Html5.Attributes as A
 data Toys = PaletteGenerator deriving (Bounded, Enum)
 
 instance ToMarkup Toys where
-    toMarkup t = a ! A.class_ "single-toy" ! A.href (fromLink link') $ div do
+    toMarkup t = hxA (fromLink link') ! A.class_ "single-toy" $ div do
         h1 title'
         p description
       where
@@ -62,9 +63,11 @@ mkToysPage =
         div ! A.class_ "toys-container" $ mapM_ toMarkup (universe @Toys)
 
 colorGeneratorHandler ::
-    (Members [Reader ColorSeed, Render, Input Int] r) =>
+    (Members [Reader ColorSeed, Render, Input Int, Input IsHXRequest] r) =>
     ServerT ColorGeneratorAPI (Sem r)
-colorGeneratorHandler = renderSite Toys <=< colorGeneratorPage
+colorGeneratorHandler = renderSite None <=< colorGeneratorPage
 
-toysHandler :: (Members [Reader ColorSeed, Render, Input Int] r) => ServerT ToysAPI (Sem r)
-toysHandler = colorGeneratorHandler :<|> (renderSite Toys =<< mkToysPage)
+toysHandler ::
+    (Members [Reader ColorSeed, Render, Input Int, Input IsHXRequest] r) =>
+    ServerT ToysAPI (Sem r)
+toysHandler = colorGeneratorHandler :<|> (renderSite None =<< mkToysPage)

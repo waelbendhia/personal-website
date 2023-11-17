@@ -4,6 +4,7 @@ import qualified Data.Text as T
 import PersonalWebsite.API
 import PersonalWebsite.Blogs (BlogEntry, toSummary)
 import PersonalWebsite.Blogs.API
+import PersonalWebsite.HTMX
 import PersonalWebsite.Internal
 import PersonalWebsite.Pandoc
 import Polysemy
@@ -28,10 +29,9 @@ introBlock = div ! A.class_ "intro-block" $ do
         "."
   where
     tagLink t =
-        a
-            ! A.href
-                (fromLink $ apiLink (Proxy @PageBlogsAPI) Nothing (Just $ T.toLower t))
-            $ fromText t
+        hxA
+            (fromLink $ apiLink (Proxy @PageBlogsAPI) Nothing (Just $ T.toLower t))
+            (fromText t)
 
 homePage :: (Member Render r) => Maybe BlogEntry -> Sem r Html
 homePage be = do

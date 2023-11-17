@@ -6,9 +6,10 @@ import qualified Clay as C
 import Data.FileEmbed
 import Optics
 import PersonalWebsite.API
-import PersonalWebsite.API.CSS (mkBaseStyle)
+import PersonalWebsite.API.CSS (baseStyle, declareVars)
 import PersonalWebsite.Colors
 import PersonalWebsite.Colors.Conversion
+import PersonalWebsite.HTMX
 import PersonalWebsite.Internal
 import PersonalWebsite.Pandoc
 import PersonalWebsite.Toys.API
@@ -28,7 +29,7 @@ getBG = askColorPalette <&> view #bg
 
 mkSample :: (Members [Reader ColorSeed, Render] r) => String -> Sem r Html
 mkSample className = do
-    sampleStyle <- mkBaseStyle
+    sampleVarDecls <- declareVars <$> askColorPalette
     sampleCodeStyle <- askCodeStyle
     sampleBlog <- mkSampleBlog
     bg' <- getBG
@@ -41,7 +42,8 @@ mkSample className = do
             C.& do
                 C.pointerEvents C.none
                 "user-select" C.-: "none"
-                sampleStyle
+                sampleVarDecls
+                baseStyle
                 paddingRem 1 1 1 1
                 C.background bg'
         style
@@ -139,8 +141,8 @@ colorGeneratorPage mSeed = do
     seedLink = a ! A.href "https://www.youtube.com/watch?v=Ahr4KFl79WI" ! A.target "blank" $ ":"
     tryForm =
         form
-            ! A.method "GET"
-            ! A.action (fromLink $ apiLink (Proxy @ColorGeneratorAPI) Nothing)
+            ! hxSwap "multi:#main:outerHTML,#header-nav:outerHTML"
+            ! hxGet (fromLink $ apiLink (Proxy @ColorGeneratorAPI) Nothing)
             $ do
                 input ! A.type_ "submit" ! A.value "try with seed"
                 input
@@ -203,13 +205,16 @@ mkPalette showSetPaletteButton = do
             sample
   where
     viewCl plt l = maybe (C.rgb 0 0 0) skylightingToClay (plt ^. l)
-    setSeedForm s = form ! A.method "POST" ! A.action "/set-seed" $ do
-        input
-            ! A.class_ "no-display"
-            ! A.type_ "text"
-            ! A.name "seed"
-            ! A.value (fromString $ toString $ toText s)
-        input ! A.type_ "submit" ! A.value "set this palette"
+    setSeedForm s = form
+        ! hxPost "/set-seed"
+        ! hxSwap "multi:#var-declarations:outerHtml,#code-style:outerHtml,#favicon-link:outerHtml"
+        $ do
+            input
+                ! A.class_ "no-display"
+                ! A.type_ "text"
+                ! A.name "seed"
+                ! A.value (fromString $ toString $ toText s)
+            input ! A.type_ "submit" ! A.value "set this palette"
     bgStyle cl = fromString $ toString $ "background: " <> C.plain (coerce $ C.value cl)
     colorBlock (t, cl) = div ! A.class_ "color-block" $ do
         div ! A.class_ "color" ! A.style (bgStyle cl) $ pass
