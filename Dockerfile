@@ -1,4 +1,4 @@
-FROM haskell:9.2.5 as build
+FROM haskell:9.2.8 as build
 RUN mkdir /opt/build
 WORKDIR /opt/build
 
@@ -30,8 +30,8 @@ RUN ls /opt/app
 RUN chmod +x /opt/app/personal-website-exe
 
 ENV PORT=8080
-ENV BLOG_FOLDER=""
-ENV BLOG_REPO=""
+ENV STATIC_FOLDER=""
+ENV PUBLIC_FOLDER=""
 
 EXPOSE $PORT
-CMD /opt/app/personal-website-exe --port $PORT --folder $BLOG_FOLDER --repo $BLOG_REPO
+CMD /opt/app/personal-website-exe --port $PORT --static-folder $STATIC_FOLDER --public-folder $PUBLIC_FOLDER
