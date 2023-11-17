@@ -42,7 +42,7 @@ mkToysStyle =
             C.display C.block
             C.maxWidth (C.px 768)
             sequence_ $ [C.marginLeft, C.marginRight] ?? C.auto
-            sequence_ $ [C.paddingRight, C.paddingLeft] ?? C.px 16
+            sequence_ $ [C.paddingRight, C.paddingLeft] ?? C.rem 1
             C.transition "all" (C.ms 150) C.ease (C.ms 150)
             C.border (C.px 2) C.solid (plt ^. #fg2)
             C.color (plt ^. #fg1)

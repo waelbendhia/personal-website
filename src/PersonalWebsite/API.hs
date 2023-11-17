@@ -5,6 +5,7 @@ import PersonalWebsite.Blogs.API
 import PersonalWebsite.Colors.API
 import PersonalWebsite.Cookies
 import PersonalWebsite.Home.API
+import PersonalWebsite.Image
 import PersonalWebsite.Toys.API
 import Relude hiding (MonadReader, ask, local)
 import Servant
@@ -15,6 +16,8 @@ type APIWithoutPalette =
         :<|> BlogsAPI
         :<|> ToysAPI
         :<|> PaletteAPI
+        :<|> "public" :> Raw
+        :<|> "favicon.ico" :> Get '[ICO] ByteString
         :<|> Raw
 
 type API = Header "Cookie" SessionData :> APIWithoutPalette

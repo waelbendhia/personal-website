@@ -1,7 +1,7 @@
 module PersonalWebsite.Internal (
     scopeCSS,
-    marginPx,
-    paddingPx,
+    marginRem,
+    paddingRem,
     on3,
     fromText,
     fromLink,
@@ -33,14 +33,17 @@ scopeCSS superClass css' =
 on3 :: (b -> b -> b -> c) -> (a -> b) -> a -> a -> a -> c
 on3 op f x y z = op (f x) (f y) (f z)
 
-marginPx :: Double -> Double -> Double -> C.Size C.LengthUnit -> C.Css
-marginPx = C.margin `on3` C.px
+on4 :: (b -> b -> b -> b -> c) -> (a -> b) -> a -> a -> a -> a -> c
+on4 op f x y z a = op (f x) (f y) (f z) (f a)
 
-paddingPx :: Double -> Double -> Double -> C.Size C.LengthUnit -> C.Css
-paddingPx = C.padding `on3` C.px
+marginRem :: Double -> Double -> Double -> Double -> C.Css
+marginRem = C.margin `on4` C.rem
 
-fromText :: IsString s => Text -> s
+paddingRem :: Double -> Double -> Double -> Double -> C.Css
+paddingRem = C.padding `on4` C.rem
+
+fromText :: (IsString s) => Text -> s
 fromText = fromString . toString
 
-fromLink :: IsString s => Servant.API.Link -> s
+fromLink :: (IsString s) => Servant.API.Link -> s
 fromLink = fromText . ("/" <>) . toUrlPiece

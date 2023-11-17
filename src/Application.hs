@@ -12,6 +12,7 @@ import OpenTelemetry.Instrumentation.Wai
 import qualified OpenTelemetry.Trace as T
 import Options.Applicative
 import PersonalWebsite.API
+import PersonalWebsite.About
 import PersonalWebsite.Blogs
 import PersonalWebsite.Handlers
 import PersonalWebsite.KVCache
@@ -32,12 +33,40 @@ import Text.Blaze.Html
 import Text.Pandoc
 import qualified Text.Pandoc as P
 
-data ApplicationConfig = ApplicationConfig {port :: !Int, source :: !Text}
+data ApplicationConfig = ApplicationConfig
+    { port :: !Int
+    , source :: !Text
+    , staticAssets :: !Text
+    , publicFolder :: !Text
+    }
     deriving (Show)
 
 sourceParser :: Parser Text
 sourceParser =
-    strOption (long "folder" <> short 's' <> help "folder containing blog posts" <> showDefault)
+    strOption
+        ( long "blogs-folder"
+            <> short 'b'
+            <> help "folder containing blog posts"
+            <> showDefault
+        )
+
+staticAssetsParser :: Parser Text
+staticAssetsParser =
+    strOption
+        ( long "static-folder"
+            <> short 's'
+            <> help "folder containing static assets"
+            <> showDefault
+        )
+
+publicAssetsParser :: Parser Text
+publicAssetsParser =
+    strOption
+        ( long "public-folder"
+            <> short 'f'
+            <> help "folder containing public assets"
+            <> showDefault
+        )
 
 configParser :: Parser ApplicationConfig
 configParser =
@@ -51,61 +80,82 @@ configParser =
                 <> showDefault
             )
         <*> sourceParser
+        <*> staticAssetsParser
+        <*> publicAssetsParser
+
+data AppContext = AppContext
+    { renderCache :: !(C.Cache ByteString Html)
+    , blogCache :: !(C.Cache ByteString (UTCTime, BlogEntry))
+    , stateIORef :: !(IORef CommonState)
+    , env :: !(Map Text Text)
+    , blogsFolder :: !Text
+    , staticFolder :: !Text
+    , publicFolder :: !Text
+    }
 
 mkApplication ::
-    C.Cache ByteString Html ->
-    C.Cache ByteString (UTCTime, BlogEntry) ->
-    IORef CommonState ->
-    Map Text Text ->
-    Text ->
+    AppContext ->
     KW.ApplicationT (Sem [Katiper, Tracing, Resource, Embed IO])
-mkApplication renderCache blogCache stateIORef env src = KW.middleware DebugS \req send' -> do
-    le <- getLogEnv
-    lc <- getKatipContext
-    ns <- getKatipNamespace
-    tp <- getTracerProvider
-    let hoistedApp =
-            serve api
-                $ hoistServer
-                    api
-                    ( Handler
-                        . ExceptT
-                        . runM
-                        . runInputSem
-                            (embed @IO $ randomRIO @Int (minInt, maxInt))
-                        . runResource
-                        . runTracing tp
-                        . runError
-                        . mapError @PandocError (toServerError . AppPandoc)
-                        . runStateIORef @CommonState stateIORef
-                        . runKatipContext le lc ns
-                        . runPandocIO env
-                        . tracePandoc
-                        . runKVWithCache @Text @(UTCTime, BlogEntry)
-                            (SHA512.hash . encodeUtf8)
-                            blogCache
-                            1024
-                        . runBlogsFromFolder src
-                        . traceBlogs
-                        . runKVWithCache @Text @Html
-                            (SHA512.hash . encodeUtf8)
-                            renderCache
-                            1024
-                        . runRenderViaPandoc
-                            P.def
-                                { P.readerExtensions =
-                                    P.extensionsFromList
-                                        [ P.Ext_backtick_code_blocks
-                                        , P.Ext_fenced_code_attributes
-                                        , P.Ext_fenced_code_blocks
-                                        ]
-                                }
-                        . renderWithCache
-                        . traceRender
-                        . runTagsFromFolder src
-                    )
-                    server
-    embed $ hoistedApp req (runM . runResource . runTracing tp . runKatipContext le lc ns . send')
+mkApplication
+    ( AppContext
+            { renderCache = renderCache'
+            , blogCache = blogCache'
+            , stateIORef = stateIORef'
+            , env = env'
+            , blogsFolder = blogs'
+            , staticFolder = static'
+            , publicFolder = public'
+            }
+        ) =
+        KW.middleware DebugS \req send' -> do
+            le <- getLogEnv
+            lc <- getKatipContext
+            ns <- getKatipNamespace
+            tp <- getTracerProvider
+            let hoistedApp =
+                    serve api
+                        $ hoistServer
+                            api
+                            ( Handler
+                                . ExceptT
+                                . runM
+                                . runInputSem
+                                    (embed @IO $ randomRIO @Int (minInt, maxInt))
+                                . runResource
+                                . runTracing tp
+                                . runError
+                                . mapError @PandocError (toServerError . AppPandoc)
+                                . mapError @CVError (toServerError . AppCV)
+                                . runStateIORef @CommonState stateIORef'
+                                . runKatipContext le lc ns
+                                . runPandocIO env'
+                                . tracePandoc
+                                . runKVWithCache @Text @(UTCTime, BlogEntry)
+                                    (SHA512.hash . encodeUtf8)
+                                    blogCache'
+                                    1024
+                                . runInputCV static'
+                                . runBlogsFromFolder blogs'
+                                . traceBlogs
+                                . runKVWithCache @Text @Html
+                                    (SHA512.hash . encodeUtf8)
+                                    renderCache'
+                                    1024
+                                . runRenderViaPandoc
+                                    P.def
+                                        { P.readerExtensions =
+                                            P.extensionsFromList
+                                                [ P.Ext_backtick_code_blocks
+                                                , P.Ext_fenced_code_attributes
+                                                , P.Ext_fenced_code_blocks
+                                                ]
+                                        }
+                                . renderWithCache
+                                . traceRender
+                                . runTagsFromFolder blogs'
+                            )
+                            (server public')
+            embed $ hoistedApp req (runM . runResource . runTracing tp . runKatipContext le lc ns . send')
 
 withTraceProvider :: (Members [Embed IO, Resource] r) => Sem (Tracing : r) a -> Sem r a
 withTraceProvider a =
@@ -115,21 +165,25 @@ withTraceProvider a =
         (`runTracing` a)
 
 runApp :: ApplicationConfig -> IO ()
-runApp (ApplicationConfig p src) = void do
-    env <- fromList . fmap (bimap toText toText) <$> getEnvironment
+runApp (ApplicationConfig p blogs' static' public') = void do
+    env' <- fromList . fmap (bimap toText toText) <$> getEnvironment
     runM . runResource . withLogEnv $ withTraceProvider do
         le <- getLogEnv
         lc <- getKatipContext
         ns <- getKatipNamespace
         tp <- getTracerProvider
         otelMiddleware <- embed newOpenTelemetryWaiMiddleware
-        renderCache <- embed $ C.newCache (Just $ fromInteger expiration)
-        blogCache <- embed $ C.newCache (Just $ fromInteger expiration)
-        stateIORef <- newIORef def
+        ctx <-
+            embed
+                ( AppContext
+                    <$> C.newCache (Just $ fromInteger expiration)
+                    <*> C.newCache (Just $ fromInteger expiration)
+                    <*> newIORef def
+                )
         let app =
                 KW.runApplication
                     (runM . runResource . runTracing tp . runKatipContext le lc ns)
-                    (mkApplication renderCache blogCache stateIORef env src)
+                    (mkApplication $ ctx env' blogs' static' public')
         hash <- Relude.lookupEnv "GIT_HASH"
         katipAddContext
             (sl "version" (fromMaybe "development" hash))

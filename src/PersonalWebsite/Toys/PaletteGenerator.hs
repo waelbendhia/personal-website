@@ -13,31 +13,36 @@ import PersonalWebsite.Internal
 import PersonalWebsite.Pandoc
 import PersonalWebsite.Toys.API
 import Polysemy
+import qualified Polysemy.Input as P
 import Polysemy.Reader
 import Relude hiding (Reader, ask, div, local, span)
 import Skylighting
 import Text.Blaze.Html5
 import qualified Text.Blaze.Html5.Attributes as A
 
-mkSampleBlog :: Member Render r => Sem r Html
+mkSampleBlog :: (Member Render r) => Sem r Html
 mkSampleBlog = renderMarkdown $ decodeUtf8 $(embedFile "assets/color-generator-samples.md")
 
-getBG :: Member (Reader ColorSeed) r => Sem r C.Color
+getBG :: (Member (Reader ColorSeed) r) => Sem r C.Color
 getBG = askColorPalette <&> view #bg
 
-mkSample :: Members [Reader ColorSeed, Render] r => String -> Sem r Html
+mkSample :: (Members [Reader ColorSeed, Render] r) => String -> Sem r Html
 mkSample className = do
     sampleStyle <- mkBaseStyle
     sampleCodeStyle <- askCodeStyle
     sampleBlog <- mkSampleBlog
     bg' <- getBG
     pure do
-        style . toMarkup . C.render $
-            fromString ("." <> className) C.? ".sample" C.& do
+        style
+            . toMarkup
+            . C.render
+            $ fromString ("." <> className)
+            C.? ".sample"
+            C.& do
                 C.pointerEvents C.none
                 "user-select" C.-: "none"
                 sampleStyle
-                paddingPx 16 16 16 16
+                paddingRem 1 1 1 1
                 C.background bg'
         style
             . toMarkup
@@ -58,7 +63,7 @@ offsetBGBy :: Float -> C.Color -> C.Color
 offsetBGBy d c =
     if getLightness c > 0.5 then C.lighten d c else C.darken d c
 
-mkPageCSS :: Member (Reader ColorSeed) r => Sem r C.Css
+mkPageCSS :: (Member (Reader ColorSeed) r) => Sem r C.Css
 mkPageCSS = do
     bg' <- shiftBG <$> getBG
     pure do
@@ -73,36 +78,55 @@ mkPageCSS = do
                 C.important $ C.marginLeft (C.px 0)
                 C.important $ C.marginRight (C.px 0)
         ".palette-block" C.<? do
-            C.padding (C.px 32) (C.px 32) (C.px 32) (C.px 32)
+            paddingRem 2 2 2 2
             C.background bg'
             C.h3 C.<? ".palette-title" C.& do
                 C.marginLeft (C.px 0)
         ".palette" C.? do
-            C.marginBottom (C.px 24)
+            C.marginBottom (C.rem 1.5)
             C.display C.grid
             "grid-template-columns" C.-: "repeat(auto-fit, minmax(224px, 1fr))"
             ".color-block" C.<? do
                 C.display C.grid
-                C.marginBottom (C.px 12)
+                C.marginBottom (C.rem 0.75)
                 C.gridTemplateColumns [C.fr 1]
                 ".info" C.<? do
                     C.whiteSpace C.nowrap
                     C.display C.flex
                     C.justifyContent C.spaceBetween
-                    sequence_ $ [C.paddingRight, C.paddingLeft] ?? C.px 12
-                    C.paddingTop (C.px 12)
-                ".color" C.<? C.height (C.px 48)
+                    sequence_ $ [C.paddingRight, C.paddingLeft] ?? C.rem 0.75
+                    C.paddingTop (C.rem 0.75)
+                ".color" C.<? C.height (C.rem 3)
 
-colorGeneratorPage :: Members [Reader ColorSeed, Render] r => Maybe SeedParam -> Sem r Html
+colorGeneratorPage ::
+    (Members [Reader ColorSeed, Render, P.Input Int] r) =>
+    Maybe SeedParam ->
+    Sem r Html
 colorGeneratorPage mSeed = do
     currentPalette <- mkPalette False
     pageCSS <- mkPageCSS
+    someRandomNumbers <- replicateM 30 $ P.input @Int
+    let joinCommas [] = ""
+        joinCommas [x, y] = x <> " and " <> y
+        joinCommas (x : xs) = x <> ", " <> joinCommas xs
+
     testPalette <- forM mSeed \case
         Seed s -> local (const s) $ mkPalette True
-        IncorrectSeed t -> pure $ span do
-            "Bad Seed"
-            seedLink
-            toMarkup $ " " <> t
+        IncorrectSeed t ->
+            pure $ div ! A.class_ "palette-block" $ do
+                p do
+                    "Bad Seed"
+                    seedLink
+                    toMarkup $ " " <> "'" <> t <> "'"
+                p do
+                    "You gotta pick a number friend. "
+                    "You remember numbers right? The things you use to count. "
+                    "In case your forgot I'll help you out. "
+                    "Let me give you some numbers you can try. "
+                    br
+                    text $ joinCommas $ show <$> someRandomNumbers
+                    " are all numbers. "
+                    "Pick any number you want, world's your oyster!"
     pure $ div do
         style . toMarkup $ C.render pageCSS
         h1 "Current palette"
@@ -128,7 +152,7 @@ colorGeneratorPage mSeed = do
                             _ -> ""
                         )
 
-mkPalette :: Members [Reader ColorSeed, Render] r => Bool -> Sem r Html
+mkPalette :: (Members [Reader ColorSeed, Render] r) => Bool -> Sem r Html
 mkPalette showSetPaletteButton = do
     seed <- ask @ColorSeed
     plt <- askColorPalette
@@ -143,8 +167,10 @@ mkPalette showSetPaletteButton = do
                 ".primary" C.? ".color" C.? C.background (plt ^. #primary)
                 ".highlight" C.? ".color" C.? C.background (plt ^. #highlight)
     sample <- mkSample className
-    pure $
-        div ! A.class_ "palette-block" $ do
+    pure
+        $ div
+        ! A.class_ "palette-block"
+        $ do
             style . toMarkup $ C.render paletteCSS
             div ! A.class_ "palette-title" $ do
                 h3 $ toMarkup blockName

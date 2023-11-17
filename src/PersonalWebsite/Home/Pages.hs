@@ -33,13 +33,14 @@ introBlock = div ! A.class_ "intro-block" $ do
                 (fromLink $ apiLink (Proxy @PageBlogsAPI) Nothing (Just $ T.toLower t))
             $ fromText t
 
-homePage :: Member Render r => Maybe BlogEntry -> Sem r Html
+homePage :: (Member Render r) => Maybe BlogEntry -> Sem r Html
 homePage be = do
     b' <- mapM toSummary be
     pure do
         div introBlock
         h1 "Newest blog"
-        div ! A.class_ "blog-list" $
-            fromMaybe
+        div
+            ! A.class_ "blog-list"
+            $ fromMaybe
                 (div ! A.class_ "empty" $ "Looks like there's nothing here yet")
                 b'

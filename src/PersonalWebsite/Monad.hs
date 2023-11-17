@@ -5,6 +5,7 @@ module PersonalWebsite.Monad (
 ) where
 
 import Katip
+import PersonalWebsite.About.Capabilities
 import PersonalWebsite.Katip
 import Polysemy
 import Polysemy.Resource
@@ -12,17 +13,20 @@ import Relude hiding (MonadReader, ask, local)
 import Servant.Server
 import Text.Pandoc as P
 
-newtype AppError = AppPandoc PandocError
-    deriving (Show, Exception, Generic)
+data AppError = AppPandoc PandocError | AppCV CVError
+    deriving (Show, Generic)
+
+instance Exception AppError
 
 toServerError :: AppError -> ServerError
 toServerError (AppPandoc pe) = err500{errReasonPhrase = show pe}
+toServerError (AppCV ce) = err500{errReasonPhrase = show ce}
 
-withLogEnv :: Members [Embed IO, Resource] r => Sem (Katiper : r) a -> Sem r a
+withLogEnv :: (Members [Embed IO, Resource] r) => Sem (Katiper : r) a -> Sem r a
 withLogEnv a = do
     handleScribe <-
-        embed $
-            mkHandleScribeWithFormatter
+        embed
+            $ mkHandleScribeWithFormatter
                 jsonFormat
                 ColorIfTerminal
                 stdout

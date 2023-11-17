@@ -24,6 +24,7 @@ library
     Application
     PersonalWebsite.About
     PersonalWebsite.About.API
+    PersonalWebsite.About.Capabilities
     PersonalWebsite.About.Pages
     PersonalWebsite.API
     PersonalWebsite.API.CSS
@@ -45,6 +46,7 @@ library
     PersonalWebsite.Home
     PersonalWebsite.Home.API
     PersonalWebsite.Home.Pages
+    PersonalWebsite.Image
     PersonalWebsite.Internal
     PersonalWebsite.Katip
     PersonalWebsite.KVCache
@@ -100,39 +102,39 @@ library
     -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
 
   build-depends:
-    , aeson
-    , aeson-optics
-    , attoparsec
-    , base                                  >=4.7 && <5
-    , base58-bytestring
-    , binary
-    , blaze-html
-    , blaze-markup
+    , aeson                                 >=2.2.1.0 && <2.3
+    , aeson-optics                          >=1.2.1
+    , attoparsec                            >=0.14.4  && <2
+    , base                                  >=4.7     && <5
+    , base58-bytestring                     >=0.1.0
+    , binary                                >=0.8.9.1
+    , blaze-html                            >=0.9.1.2
+    , blaze-markup                          >=0.8.3.0
     , bytestring
     , cache
-    , capability
-    , clay
+    , clay                                  >=0.14.0
     , cookie
     , cryptohash
     , directory
     , file-embed
+    , hip                                   >=1.5.6.0
     , hs-opentelemetry-api
     , hs-opentelemetry-instrumentation-wai
     , hs-opentelemetry-sdk
     , http-api-data
     , http-types
-    , katip
+    , katip                                 >=0.8.7.4
     , katip-wai
-    , mtl
-    , optics
+    , mtl                                   >=2.3.1
+    , optics                                >=0.4.2.1
     , optparse-applicative
-    , pandoc
-    , polysemy
+    , pandoc                                >=3.1.9
+    , polysemy                              >=1.9.1.3
     , polysemy-zoo
     , process
     , random
-    , relude
-    , servant
+    , relude                                >=1.2.1.0
+    , servant                               >=0.20.1
     , servant-blaze
     , servant-server
     , skylighting
@@ -193,14 +195,13 @@ executable personal-website-exe
   build-depends:
     , aeson
     , attoparsec
-    , base                  >=4.7 && <5
+    , base                  >=4.7     && <5
     , base58-bytestring
     , binary
-    , blaze-html
-    , blaze-markup
+    , blaze-html            >=0.9.1.2
+    , blaze-markup          >=0.8.3.0
     , bytestring
-    , capability
-    , clay
+    , clay                  >=0.14.0
     , cookie
     , file-embed
     , http-api-data

@@ -8,6 +8,7 @@ import PersonalWebsite.Blogs
 import PersonalWebsite.Colors
 import PersonalWebsite.Cookies
 import PersonalWebsite.Home
+import PersonalWebsite.Image
 import PersonalWebsite.Pages
 import PersonalWebsite.Pandoc
 import PersonalWebsite.Toys
@@ -20,15 +21,18 @@ import System.Random
 import Text.Blaze.Renderer.Utf8
 
 server ::
-    (Members [Blogs, Render, Input Tags, Input Int, Embed IO] r) =>
+    (Members [Blogs, Render, Input Tags, Input Int, Embed IO, Input ParsedCV] r) =>
+    Text ->
     ServerT API (Sem r)
-server sess =
+server publicFolder sess =
     hoistServer (Proxy @APIWithoutPalette) (runReader seed')
         $ homeHandler
         :<|> aboutHandler
         :<|> blogsHandler
         :<|> toysHandler
         :<|> paletteHandler
+        :<|> serveDirectoryWebApp (toString publicFolder)
+        :<|> pure mempty
         :<|> pure notFoundHandler
   where
     seed' = coerce sess ?: ColorSeed 86
@@ -41,3 +45,10 @@ server sess =
         res
             $ responseLBS status404 [("Content-Type", "text/html; charset=UTF-8")]
             $ renderMarkup resp
+
+faviconHandler ::
+    (Members '[Reader ColorSeed] r) =>
+    ServerT ("favicon.ico" :> Get '[ICO] ByteString) (Sem r)
+faviconHandler = do
+    plt <- askColorPalette
+    pure mempty

@@ -1,8 +1,7 @@
 #!/usr/bin/env fish
 
-cabal build
+cabal build --disable-optimization
 and begin
-  set -g GIT_HASH $(git rev-parse HEAD)
-  mv $(cabal list-bin personal-website-exe) ./
-  ./personal-website-exe -p 8080 -s test-blogs/
+  mv $(cabal list-bin --disable-optimization personal-website-exe) ./
+  ./personal-website-exe -p 8080 -b test-blogs/ -s static/ -f public/
 end
