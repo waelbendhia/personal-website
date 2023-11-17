@@ -34,7 +34,7 @@ jobs:
       - name: Build and publish
         uses: docker/build-push-action@v5
         with:
-          context: ./personal-website
+          context: ./
           push: true
           tags: ghcr.io/waelbendhia/personal-website:latest
           cache-from: type=gha
