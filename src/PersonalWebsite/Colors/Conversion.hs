@@ -33,12 +33,15 @@ hslToRgb (h, s, l)
                 | t' < 2 / 3 -> p + ((q - p) * (2 / 3 - t') * 6)
                 | otherwise -> p
 
+hslToSkylighting :: (Integer, Float, Float) -> Maybe Sk.Color
+hslToSkylighting col' = clayToSkylighting $ rgb r g b
+  where
+    (r, g, b) = hslToRgb col'
+
 clayToSkylighting :: Color -> Maybe Sk.Color
 clayToSkylighting (Rgba r g b _) =
     Sk.toColor @Int $ fromInteger $ shift r 16 .|. shift g 8 .|. b
-clayToSkylighting (Hsla h s l _) =
-    let (r, g, b) = hslToRgb (h, s, l)
-     in clayToSkylighting $ rgb r g b
+clayToSkylighting (Hsla h s l _) = hslToSkylighting (h, s, l)
 clayToSkylighting _ = Nothing
 
 skylightingToClay :: Sk.Color -> Color

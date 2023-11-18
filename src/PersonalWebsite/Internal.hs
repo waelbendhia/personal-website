@@ -3,6 +3,7 @@ module PersonalWebsite.Internal (
     marginRem,
     paddingRem,
     on3,
+    on4,
     fromText,
     fromLink,
 ) where

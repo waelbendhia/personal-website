@@ -66,7 +66,7 @@ class Nameable api where
 instance (KnownSymbol sym, Nameable api) => Nameable (sym :> api) where
     name = toText (symbolVal @sym Proxy) <> "/" <> name @api
 
-instance Nameable api => Nameable (ReqBody types body :> api) where
+instance (Nameable api) => Nameable (ReqBody types body :> api) where
     name = name @api
 
 instance Nameable (Post types resp) where
@@ -81,7 +81,7 @@ instance Nameable (Put types resp) where
 instance Nameable (Delete types resp) where
     name = " DELETE"
 
-instance Nameable api => Nameable (QueryParam' mods sym t :> api) where
+instance (Nameable api) => Nameable (QueryParam' mods sym t :> api) where
     name = name @api
 
 instance (KnownSymbol sym, Nameable api) => Nameable (Capture' mods sym t :> api) where
@@ -89,9 +89,9 @@ instance (KnownSymbol sym, Nameable api) => Nameable (Capture' mods sym t :> api
 
 traceHandler ::
     forall api r a.
-    Nameable api =>
+    (Nameable api) =>
     Proxy api ->
-    Members [Tracing, Embed IO] r =>
+    (Members [Tracing, Embed IO] r) =>
     Maybe (Otel.Tracer, Otel.Span) ->
     Sem r a ->
     Sem r a
@@ -111,18 +111,23 @@ withTracing ::
 withTracing s mt =
     hoistServer @api @(Sem r) @(Sem r) Proxy (traceHandler @api Proxy mt) s
 
-inSpan' :: Members '[Tracing] r => Text -> Otel.SpanArguments -> Sem r a -> Sem r a
+inSpan' :: (Members '[Tracing] r) => Text -> Otel.SpanArguments -> Sem r a -> Sem r a
 inSpan' = inSpan callStack
 
 runTracing ::
     forall r a.
-    Members [Resource, Embed IO] r =>
+    (Members [Resource, Embed IO] r) =>
     Otel.TracerProvider ->
     Sem (Tracing : r) a ->
     Sem r a
 runTracing tp = runTracing' Nothing Nothing
   where
-    runTracing' :: forall b. Maybe Otel.Tracer -> Maybe Otel.Span -> Sem (Tracing : r) b -> Sem r b
+    runTracing' ::
+        forall b.
+        Maybe Otel.Tracer ->
+        Maybe Otel.Span ->
+        Sem (Tracing : r) b ->
+        Sem r b
     runTracing' mt ms =
         interpretH \case
             GetTracerProvider -> pureT tp
@@ -133,9 +138,13 @@ runTracing tp = runTracing' Nothing Nothing
                 mm <- runT m
                 raise $ runTracing' mt (Just sp) mm
             GetTracer ->
-                pureT $
-                    fromMaybe
-                        (Otel.makeTracer tp "opentelemetry-haskell" (Otel.TracerOptions Nothing))
+                pureT
+                    $ fromMaybe
+                        ( Otel.makeTracer
+                            tp
+                            "opentelemetry-haskell"
+                            (Otel.TracerOptions Nothing)
+                        )
                         mt
             CurrentSpan -> pureT ms
             InSpan cs n args m -> do
@@ -144,28 +153,37 @@ runTracing tp = runTracing' Nothing Nothing
                 bracket
                     startSpan
                     (uncurry endSpan)
-                    \(_, s) -> raise (runTracing' (Just t) (Just s) mm) `onException` onError s
+                    \(_, s) ->
+                        raise (runTracing' (Just t) (Just s) mm)
+                            `onException` onError s
               where
                 startSpan = do
                     ctx <- Otel.getContext
                     t <- raise $ runTracing' mt ms getTracer
                     s <- Otel.createSpanWithoutCallStack t ctx n args
                     Otel.adjustContext (Otel.insertSpan s)
-                    Otel.whenSpanIsRecording s $ case getCallStack cs of
-                        [] -> pass
-                        (fn, loc) : _ -> do
-                            Otel.addAttributes
-                                s
-                                $ fromList
-                                    [ ("code.function", Otel.toAttribute $ toText fn)
-                                    , ("code.namespace", Otel.toAttribute $ toText $ srcLocModule loc)
-                                    , ("code.filepath", Otel.toAttribute $ toText $ srcLocFile loc)
-                                    , ("code.lineno", Otel.toAttribute $ srcLocStartLine loc)
-                                    , ("code.package", Otel.toAttribute $ toText $ srcLocPackage loc)
-                                    ]
+                    Otel.whenSpanIsRecording s
+                        $ Otel.addAttributes s
+                        $ callstackAttributes cs
                     mParent <- raise $ runTracing' mt ms currentSpan
                     pure (mParent <|> Otel.lookupSpan ctx, s)
                 onError s = Otel.setStatus s $ Otel.Error ""
                 endSpan parent s = do
                     Otel.endSpan s Nothing
-                    Otel.adjustContext \ctx -> maybe (Otel.removeSpan ctx) (`Otel.insertSpan` ctx) parent
+                    Otel.adjustContext \ctx ->
+                        maybe
+                            (Otel.removeSpan ctx)
+                            (`Otel.insertSpan` ctx)
+                            parent
+
+callstackAttributes :: CallStack -> HashMap Text Otel.Attribute
+callstackAttributes cs = case getCallStack cs of
+    [] -> mempty
+    (fn, loc) : _ ->
+        fromList
+            [ ("code.function", Otel.toAttribute $ toText fn)
+            , ("code.namespace", Otel.toAttribute $ toText $ srcLocModule loc)
+            , ("code.filepath", Otel.toAttribute $ toText $ srcLocFile loc)
+            , ("code.lineno", Otel.toAttribute $ srcLocStartLine loc)
+            , ("code.package", Otel.toAttribute $ toText $ srcLocPackage loc)
+            ]

@@ -161,7 +161,8 @@ tagsStyle =
 
 baseStyle :: Css
 baseStyle = do
-    star ? transition "color, background" (ms 150) ease (ms 0)
+    star ? do
+        "transition" -: "color 150ms ease, background 150ms ease"
     html ? do
         "scroll-padding" -: "3rem"
         overflow auto
