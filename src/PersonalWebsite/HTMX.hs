@@ -1,15 +1,16 @@
 module PersonalWebsite.HTMX (
-    hxTarget,
-    hxGet,
-    hxSwap,
-    hxPushURL,
-    hxA,
-    hxPost,
-    hxExt,
-    hxBoost,
     IsHXRequest (..),
-    sseSwap,
+    hxA,
+    hxBoost,
+    hxDisable,
+    hxExt,
+    hxGet,
+    hxPost,
+    hxPushURL,
+    hxSwap,
+    hxTarget,
     sseConnect,
+    sseSwap,
 ) where
 
 import Relude
@@ -41,6 +42,9 @@ hxExt = customAttribute "hx-ext"
 
 hxBoost :: Attribute
 hxBoost = customAttribute "hx-boost" "true"
+
+hxDisable :: Attribute
+hxDisable = customAttribute "hx-disable" "true"
 
 hxA :: AttributeValue -> Html -> Html
 hxA href' =

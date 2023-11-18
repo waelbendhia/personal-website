@@ -164,7 +164,7 @@ projectShowCase = div do
 resumeOrCV :: Maybe Text -> Value -> Html
 resumeOrCV selectedTag cv = div do
     h1 "Resume"
-    p do
+    (p ! hxDisable) do
         "You can "
         a
             ! A.href "/public/wael-ben-dhia.pdf"
