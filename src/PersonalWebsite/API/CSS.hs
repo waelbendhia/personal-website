@@ -223,6 +223,7 @@ baseStyle = do
     a <> button ? linkStyle
     h1 <> h2 <> h3 <> h4 <> header ? serifFont
     header ? do
+        boxSizing borderBox
         "backdrop-filter" -: "blur(4px)"
         flexRow
         justifyContent spaceBetween
