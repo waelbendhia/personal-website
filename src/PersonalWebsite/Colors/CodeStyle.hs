@@ -64,7 +64,8 @@ styleFromHighlight ch =
                 ]
         }
 
-randomHightlight :: (RandomGen g) => (Integer, Float, Float) -> R.RandomT g CodeHighlight
+randomHightlight ::
+    (RandomGen g) => (Integer, Float, Float) -> R.RandomT g CodeHighlight
 randomHightlight (bgh, bgs, bgl) =
     CodeHighlight
         <$> randomSK (bgh, bgs, codeBGL) (30, 10, 10)
@@ -84,7 +85,9 @@ randomHightlight (bgh, bgs, bgl) =
 
 askCodeHighlight :: (Member (Reader ColorSeed) r) => Sem r CodeHighlight
 askCodeHighlight = asks @ColorSeed $ \s ->
-    let (bg', s') = R.withRandom (mkStdGen $ coerce s) $ R.randomRM ((0, 0, 0), (255, 100, 100))
+    let (bg', s') =
+            R.withRandom (mkStdGen $ coerce s)
+                $ R.randomRM ((0, 0, 0), (255, 100, 100))
      in fst $ R.withRandom s' $ randomHightlight bg'
 
 askCodeStyle :: (Member (Reader ColorSeed) r) => Sem r Style
