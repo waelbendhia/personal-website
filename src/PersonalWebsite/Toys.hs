@@ -9,6 +9,7 @@ import PersonalWebsite.API
 import PersonalWebsite.Colors
 import PersonalWebsite.HTMX
 import PersonalWebsite.Internal
+import PersonalWebsite.LiveReload
 import PersonalWebsite.Pages
 import PersonalWebsite.Pandoc
 import PersonalWebsite.Toys.API
@@ -63,11 +64,27 @@ mkToysPage =
         div ! A.class_ "toys-container" $ mapM_ toMarkup (universe @Toys)
 
 colorGeneratorHandler ::
-    (Members [Reader ColorSeed, Render, Input Int, Input IsHXRequest] r) =>
+    ( Members
+        [ Reader ColorSeed
+        , Render
+        , Input Int
+        , Input IsHXRequest
+        , Input UseLiveReload
+        ]
+        r
+    ) =>
     ServerT ColorGeneratorAPI (Sem r)
 colorGeneratorHandler = renderSite None <=< colorGeneratorPage
 
 toysHandler ::
-    (Members [Reader ColorSeed, Render, Input Int, Input IsHXRequest] r) =>
+    ( Members
+        [ Reader ColorSeed
+        , Render
+        , Input Int
+        , Input IsHXRequest
+        , Input UseLiveReload
+        ]
+        r
+    ) =>
     ServerT ToysAPI (Sem r)
 toysHandler = colorGeneratorHandler :<|> (renderSite None =<< mkToysPage)

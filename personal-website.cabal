@@ -52,6 +52,7 @@ library
     PersonalWebsite.Internal
     PersonalWebsite.Katip
     PersonalWebsite.KVCache
+    PersonalWebsite.LiveReload
     PersonalWebsite.Monad
     PersonalWebsite.Pages
     PersonalWebsite.Pages.Container
@@ -106,6 +107,7 @@ library
   build-depends:
     , aeson                                 >=2.2.1.0 && <2.3
     , aeson-optics                          >=1.2.1
+    , async
     , attoparsec                            >=0.14.4  && <2
     , base                                  >=4.7     && <5
     , base58-bytestring                     >=0.1.0

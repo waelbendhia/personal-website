@@ -2,6 +2,8 @@
 
 module Application (runApp, configParser) where
 
+import Control.Concurrent
+import Control.Concurrent.Async
 import qualified Crypto.Hash.SHA512 as SHA512
 import qualified Data.Cache as C
 import Data.Time
@@ -17,6 +19,7 @@ import PersonalWebsite.Blogs
 import PersonalWebsite.Handlers
 import PersonalWebsite.KVCache
 import PersonalWebsite.Katip as PK
+import PersonalWebsite.LiveReload
 import PersonalWebsite.Monad
 import PersonalWebsite.Pandoc
 import PersonalWebsite.Tracing
@@ -27,11 +30,11 @@ import Polysemy.Resource
 import Polysemy.State
 import Relude hiding (Reader, ask, evalState, runReader)
 import Servant
-import System.Environment
+import System.Environment hiding (lookupEnv)
 import System.Random
 import Text.Blaze.Html
-import Text.Pandoc
-import qualified Text.Pandoc as P
+import Text.Pandoc hiding (lookupEnv)
+import qualified Text.Pandoc as P hiding (lookupEnv)
 
 data ApplicationConfig = ApplicationConfig
     { port :: !Int
@@ -76,6 +79,7 @@ data AppContext = AppContext
     { renderCache :: !(C.Cache ByteString Html)
     , blogCache :: !(C.Cache ByteString (UTCTime, BlogEntry))
     , stateIORef :: !(IORef CommonState)
+    , refreshChan :: !(Maybe (Chan ShouldRefresh))
     , env :: !(Map Text Text)
     , staticFolder :: !Text
     , publicFolder :: !Text
@@ -92,6 +96,7 @@ mkApplication
             , env = env'
             , staticFolder = static'
             , publicFolder = public'
+            , refreshChan = refreshCh
             }
         ) =
         KW.middleware DebugS \req send' -> do
@@ -99,13 +104,24 @@ mkApplication
             lc <- getKatipContext
             ns <- getKatipNamespace
             tp <- getTracerProvider
-            let hoistedApp =
+            let getRefreshSignal =
+                    join <$> forM refreshCh \ch -> do
+                        refreshSig <-
+                            race
+                                (threadDelay (pollingInterval * 1000000))
+                                (readChan ch)
+                        pure $ either (const Nothing) Just refreshSig
+                hoistedApp =
                     serve api
                         $ hoistServer
                             api
                             ( Handler
                                 . ExceptT
                                 . runM
+                                . runInputConst
+                                    (UseLiveReload $ isJust refreshCh)
+                                . runInputSem
+                                    (embed @IO getRefreshSignal)
                                 . runInputSem
                                     (embed @IO $ randomRIO @Int (minInt, maxInt))
                                 . runResource
@@ -143,14 +159,26 @@ mkApplication
                                 . runTagsFromFolder static'
                             )
                             (server public')
-            embed $ hoistedApp req (runM . runResource . runTracing tp . runKatipContext le lc ns . send')
+            embed
+                $ hoistedApp req
+                $ runM
+                . runResource
+                . runTracing tp
+                . runKatipContext le lc ns
+                . send'
 
 withTraceProvider :: (Members [Embed IO, Resource] r) => Sem (Tracing : r) a -> Sem r a
-withTraceProvider a =
-    bracket
-        (embed T.initializeGlobalTracerProvider)
-        (embed @IO . T.shutdownTracerProvider)
-        (`runTracing` a)
+withTraceProvider a = do
+    shouldOtlp <- isJust <$> lookupEnv "OTEL_EXPORTER_OTLP_ENDPOINT"
+    if shouldOtlp
+        then
+            bracket
+                (embed T.initializeGlobalTracerProvider)
+                (embed @IO . T.shutdownTracerProvider)
+                (`runTracing` a)
+        else do
+            tp <- T.createTracerProvider [] T.emptyTracerProviderOptions
+            runTracing tp a
 
 runApp :: ApplicationConfig -> IO ()
 runApp (ApplicationConfig p static' public') = void do
@@ -167,6 +195,14 @@ runApp (ApplicationConfig p static' public') = void do
                     <$> C.newCache (Just $ fromInteger expiration)
                     <*> C.newCache (Just $ fromInteger expiration)
                     <*> newIORef def
+                    <*> do
+                        name <- getProgName
+                        if name == "<interactive>"
+                            then do
+                                ch <- newChan
+                                writeChan ch ShouldRefresh
+                                pure $ Just ch
+                            else pure Nothing
                 )
         let app =
                 KW.runApplication

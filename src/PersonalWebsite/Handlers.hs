@@ -13,6 +13,8 @@ import PersonalWebsite.Colors.Conversion
 import PersonalWebsite.Colors.Pages
 import PersonalWebsite.Cookies
 import PersonalWebsite.Home
+import PersonalWebsite.Katip
+import PersonalWebsite.LiveReload
 import PersonalWebsite.Pages
 import PersonalWebsite.Pandoc
 import PersonalWebsite.Toys
@@ -45,6 +47,9 @@ server ::
         , Embed IO
         , Input ParsedCV
         , Error ServerError
+        , Input (Maybe ShouldRefresh)
+        , Input UseLiveReload
+        , Katiper
         ]
         r
     ) =>
@@ -60,6 +65,7 @@ server publicFolder sess isHXRequest =
         :<|> toysHandler
         :<|> paletteHandler
         :<|> faviconHandler
+        :<|> liveReloadHandler
         :<|> serveDirectoryWebApp (toString publicFolder)
         :<|> streamEmojis
         :<|> pure notFoundHandler
@@ -72,6 +78,7 @@ server publicFolder sess isHXRequest =
                 $ runInputSem (embed @IO $ randomRIO @Int (minInt, maxInt))
                 $ runReader seed'
                 $ runInputConst isHXRequest'
+                $ runInputConst (UseLiveReload False)
                 $ renderSite None lostPage
         res
             $ responseLBS status404 [("Content-Type", "text/html; charset=UTF-8")]

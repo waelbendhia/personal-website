@@ -109,7 +109,7 @@ renderBlogEntry withTOC be =
             div do
                 toMarkup $ formatTime defaultTimeLocale "%B %e %Y" (be ^. #content % #date)
                 br
-                "Last modified on "
+                "Updated on "
                 toMarkup $ formatTime defaultTimeLocale "%B %e %Y" (be ^. #editDate)
             div ! A.class_ "tags" $ mapM_ renderTag (be ^. #content % #tags)
         when withTOC $ renderTOC body'

@@ -15,6 +15,7 @@ import PersonalWebsite.Colors
 import PersonalWebsite.HTMX
 import PersonalWebsite.Home.API
 import PersonalWebsite.Internal
+import PersonalWebsite.LiveReload
 import PersonalWebsite.TH
 import PersonalWebsite.Toys.API
 import Polysemy
@@ -63,6 +64,9 @@ siteHead = do
             ! A.href ("favicon.ico?tag=" <> fromText (toText seed))
         style ! A.id "var-declarations" $ toMarkup $ C.render varDeclarations
         style ! A.id "code-style" $ toMarkup $ toText $ styleToCss st
+        meta
+            ! A.name "viewport"
+            ! A.content "width=device-width, initial-scale=1"
         style $ toMarkup $ C.render baseStyle
         link
             ! A.rel "stylesheet"
@@ -76,7 +80,10 @@ navBar at = div ! A.id "header-nav" ! A.class_ "nav" $ mapM_ (navItem at) [Home 
 
 siteHeader :: Tab -> Html
 siteHeader at = header do
-    div ! A.class_ "title" $ h3 "Wael's very own super special personal website"
+    div ! A.class_ "title" $ h3 do
+        "Wael's "
+        span "very own super special personal "
+        "website"
     navBar at
 
 siteFooter :: (Members '[P.Input Int] r) => Sem r Html
@@ -120,25 +127,36 @@ siteFooter = do
         button
             ! hxPost "/randomize"
             ! hxSwap "multi:#var-declarations:outerHtml,#code-style:outerHtml,#favicon-link:outerHtml"
-            $ "Click me to set a random color palette"
+            $ "Set a random color palette"
 
 renderPage ::
-    (Members '[Reader ColorSeed, P.Input Int] r, ToMarkup content) =>
+    ( Members '[Reader ColorSeed, P.Input Int, P.Input UseLiveReload] r
+    , ToMarkup content
+    ) =>
     Tab ->
     content ->
     Sem r Html
 renderPage at cnt = do
     head' <- siteHead
     footer' <- siteFooter
+    UseLiveReload useLiveReload <- P.input
     pure $ docTypeHtml $ (html ! hxExt "multi-swap" ! hxBoost) do
         head'
         body do
             siteHeader at
             main ! A.id "main" $ toMarkup cnt
             footer'
+            when useLiveReload liveReload
 
 renderSite ::
-    (Members '[Reader ColorSeed, P.Input Int, P.Input IsHXRequest] r) =>
+    ( Members
+        '[ Reader ColorSeed
+         , P.Input Int
+         , P.Input UseLiveReload
+         , P.Input IsHXRequest
+         ]
+        r
+    ) =>
     Tab ->
     Html ->
     Sem r Html

@@ -1,6 +1,7 @@
 module PersonalWebsite.API.CSS (baseStyle, declareVars) where
 
 import Clay as Cl
+import qualified Clay.Media as M
 import Optics hiding (pre, (#), (&), (|>))
 import PersonalWebsite.Colors hiding (background)
 import PersonalWebsite.Internal
@@ -159,10 +160,30 @@ tagsStyle =
         "gap" -: "1rem"
         "flex-wrap" -: "wrap"
 
+mobileStyle :: Css
+mobileStyle = do
+    header ? do
+        paddingRem 0 1 0 1
+        height (rem 3)
+        Cl.span ? display none
+    footer ? do
+        div <? do
+            flexCol
+            alignItems flexStart
+    ".metadata" ? do
+        flexCol
+        alignItems flexStart
+        "gap" -: "0.75rem"
+    div ? ".sourceCode" & do
+        fontSize (rem 0.875)
+        marginLeft (rem (-1))
+        marginRight (rem (-1))
+
 baseStyle :: Css
 baseStyle = do
-    star ? do
-        "transition" -: "color 150ms ease, background 150ms ease"
+    query M.screen [M.maxWidth (px 480)] mobileStyle
+    star ? do "transition" -: "color 150ms ease, background 150ms ease"
+    ".live-reload" ? display displayNone
     html ? do
         "scroll-padding" -: "3rem"
         overflow auto
@@ -224,6 +245,7 @@ baseStyle = do
     a <> button ? linkStyle
     h1 <> h2 <> h3 <> h4 <> header ? serifFont
     header ? do
+        overflow hidden
         boxSizing borderBox
         "backdrop-filter" -: "blur(4px)"
         flexRow
@@ -274,6 +296,7 @@ baseStyle = do
         marginRem 0 0 0 0
         minHeight (pct 100)
     main_ <? do
+        boxSizing borderBox
         flexGrow 1
         paddingRem 1.5 1 1.5 1
         maxWidth (px 1024)

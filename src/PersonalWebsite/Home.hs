@@ -14,8 +14,18 @@ import Polysemy.Input
 import Polysemy.Reader
 import Relude hiding (MonadReader, Reader, ask, local)
 import Servant
+import PersonalWebsite.LiveReload
 
 homeHandler ::
-    (Members '[Blogs, Render, Reader ColorSeed, Input Int, Input IsHXRequest] r) =>
+    ( Members
+        '[ Blogs
+         , Render
+         , Reader ColorSeed
+         , Input Int
+         , Input IsHXRequest
+         , Input UseLiveReload
+         ]
+        r
+    ) =>
     ServerT HomeAPI (Sem r)
 homeHandler = renderSite Home =<< homePage . viaNonEmpty head =<< getBlogs 0 Nothing

@@ -10,6 +10,7 @@ import PersonalWebsite.Blogs.Capabilities
 import PersonalWebsite.Blogs.Data
 import PersonalWebsite.Blogs.Pages
 import PersonalWebsite.Colors
+import PersonalWebsite.LiveReload
 import PersonalWebsite.Pages
 import PersonalWebsite.Pandoc
 import Polysemy
@@ -19,7 +20,17 @@ import Relude hiding (Reader)
 import Servant
 
 blogsHandler ::
-    (Members '[Blogs, Render, Input Tags, Reader ColorSeed, Input Int, Input IsHXRequest] r) =>
+    ( Members
+        '[ Blogs
+         , Render
+         , Input Tags
+         , Reader ColorSeed
+         , Input Int
+         , Input IsHXRequest
+         , Input UseLiveReload
+         ]
+        r
+    ) =>
     ServerT BlogsAPI (Sem r)
 blogsHandler = pageBlogsHandler :<|> tagsHandler :<|> blogHandler
   where

@@ -13,7 +13,7 @@ module PersonalWebsite.HTMX (
     sseSwap,
 ) where
 
-import Relude
+import Relude hiding (div)
 import Servant
 import Text.Blaze
 import Text.Blaze.Html5
@@ -59,3 +59,4 @@ sseConnect = customAttribute "sse-connect"
 
 sseSwap :: AttributeValue -> Attribute
 sseSwap = customAttribute "sse-swap"
+

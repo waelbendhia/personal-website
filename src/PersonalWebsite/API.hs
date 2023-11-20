@@ -15,6 +15,7 @@ import PersonalWebsite.Cookies
 import PersonalWebsite.HTMX
 import PersonalWebsite.Home.API
 import PersonalWebsite.Image
+import PersonalWebsite.LiveReload
 import PersonalWebsite.Toys.API
 import Relude hiding (MonadReader, ask, local)
 import Servant
@@ -41,6 +42,7 @@ type APIWithoutPalette =
         :<|> ToysAPI
         :<|> PaletteAPI
         :<|> FaviconAPI
+        :<|> LiveReloadAPI
         :<|> "public" :> Raw
         :<|> StreamojiAPI
         :<|> Raw
