@@ -34,4 +34,8 @@ ENV STATIC_FOLDER=""
 ENV PUBLIC_FOLDER=""
 
 EXPOSE $PORT
-CMD /opt/app/personal-website-exe --port $PORT --static-folder $STATIC_FOLDER --public-folder $PUBLIC_FOLDER
+ENTRYPOINT [ "/opt/app/personal-website-exe"
+           , "--port $PORT"
+           , "--static-folder $STATIC_FOLDER"
+           , "--public-folder $PUBLIC_FOLDER"
+           ]
