@@ -35,4 +35,7 @@ withLogEnv a = do
     let makeLogEnv = embed do
             le <- initLogEnv "PersonalWebsite" "production"
             registerScribe "stdout" handleScribe defaultScribeSettings le
-    bracket makeLogEnv (embed . closeScribes) \le -> runKatipContext le mempty "PersonalWebsite" a
+    bracket
+        makeLogEnv
+        (embed . closeScribes)
+        \le -> runKatipContext le mempty "PersonalWebsite" a

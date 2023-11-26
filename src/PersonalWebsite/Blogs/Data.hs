@@ -1,4 +1,8 @@
-module PersonalWebsite.Blogs.Data (BlogEntry (..), BlogData (..), Tags (..)) where
+module PersonalWebsite.Blogs.Data (
+    BlogEntry (..),
+    BlogData (..),
+    Tags (..),
+) where
 
 import Data.Aeson
 import Data.Time

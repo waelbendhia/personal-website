@@ -31,6 +31,7 @@ import Polysemy.State
 import Relude hiding (Reader, ask, evalState, runReader)
 import Servant
 import System.Environment hiding (lookupEnv)
+import System.Posix as Posix hiding (Resource, getEnvironment)
 import System.Random
 import Text.Blaze.Html
 import Text.Pandoc hiding (lookupEnv)
@@ -197,22 +198,31 @@ runApp (ApplicationConfig p static' public') = void do
                     <*> newIORef def
                     <*> do
                         name <- getProgName
-                        if name == "<interactive>"
-                            then do
-                                ch <- newChan
-                                writeChan ch ShouldRefresh
-                                pure $ Just ch
-                            else pure Nothing
+                        forM (guarded (== "<interactive>") name) \_ -> do
+                            ch <- newChan
+                            ch <$ writeChan ch ShouldRefresh
                 )
         let app =
                 KW.runApplication
-                    (runM . runResource . runTracing tp . runKatipContext le lc ns)
+                    ( runM
+                        . runResource
+                        . runTracing tp
+                        . runKatipContext le lc ns
+                    )
                     (mkApplication $ ctx env' static' public')
+            closeHandler closeSocket = void do
+                let closeServer = Posix.Catch do
+                        closeSocket
+                        T.shutdownTracerProvider tp
+                _ <- installHandler sigINT closeServer Nothing
+                installHandler sigTERM closeServer Nothing
+            warpSettings =
+                Warp.defaultSettings
+                    & setPort p
+                    & setInstallShutdownHandler closeHandler
         hash <- Relude.lookupEnv "GIT_HASH"
-        katipAddContext
-            (sl "version" (fromMaybe "development" hash))
-            do
-                $logTM InfoS "application starting"
-                embed $ Warp.run p $ otelMiddleware app
+        katipAddContext (sl "version" (fromMaybe "development" hash)) do
+            $logTM InfoS "application starting"
+            embed $ Warp.runSettings warpSettings $ otelMiddleware app
   where
     expiration = 60 * 60 * ((10 :: Integer) ^ (9 :: Integer))
