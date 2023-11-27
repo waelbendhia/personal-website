@@ -68,12 +68,9 @@ siteHead = do
             ! A.name "viewport"
             ! A.content "width=device-width, initial-scale=1"
         style $ toMarkup $ C.render baseStyle
-        link
-            ! A.rel "stylesheet"
-            ! A.href "https://cdn.jsdelivr.net/gh/aymanbagabas/iosevka-fonts@v6.1.2/dist/iosevka/iosevka.min.css"
-        link
-            ! A.rel "stylesheet"
-            ! A.href "https://cdnjs.cloudflare.com/ajax/libs/Iosevka/6.0.0/iosevka-etoile/iosevka-etoile.min.css"
+        link ! A.rel "stylesheet" ! A.href "/public/Iosevka.css"
+        link ! A.rel "stylesheet" ! A.href "/public/IosevkaAile.css"
+        link ! A.rel "stylesheet" ! A.href "/public/IosevkaEtoile.css"
 
 navBar :: Tab -> Html
 navBar at = div ! A.id "header-nav" ! A.class_ "nav" $ mapM_ (navItem at) [Home .. CV]

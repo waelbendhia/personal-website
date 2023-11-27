@@ -190,17 +190,19 @@ runApp (ApplicationConfig p static' public') = void do
         ns <- getKatipNamespace
         tp <- getTracerProvider
         otelMiddleware <- embed newOpenTelemetryWaiMiddleware
+        let isInteractive = (== "<interactive>") <$> getProgName
         ctx <-
             embed
                 ( AppContext
                     <$> C.newCache (Just $ fromInteger expiration)
                     <*> C.newCache (Just $ fromInteger expiration)
                     <*> newIORef def
-                    <*> do
-                        name <- getProgName
-                        forM (guarded (== "<interactive>") name) \_ -> do
+                    <*> ifM
+                        isInteractive
+                        do
                             ch <- newChan
-                            ch <$ writeChan ch ShouldRefresh
+                            Just ch <$ writeChan ch ShouldRefresh
+                        (pure Nothing)
                 )
         let app =
                 KW.runApplication
@@ -216,13 +218,15 @@ runApp (ApplicationConfig p static' public') = void do
                         T.shutdownTracerProvider tp
                 _ <- installHandler sigINT closeServer Nothing
                 installHandler sigTERM closeServer Nothing
-            warpSettings =
-                Warp.defaultSettings
-                    & setPort p
-                    & setInstallShutdownHandler closeHandler
+            warpSettings = Warp.defaultSettings & setPort p
+        warpSettings' <-
+            ifM
+                (embed isInteractive)
+                (pure $ warpSettings & setInstallShutdownHandler closeHandler)
+                (pure warpSettings)
         hash <- Relude.lookupEnv "GIT_HASH"
         katipAddContext (sl "version" (fromMaybe "development" hash)) do
             $logTM InfoS "application starting"
-            embed $ Warp.runSettings warpSettings $ otelMiddleware app
+            embed $ Warp.runSettings warpSettings' $ otelMiddleware app
   where
     expiration = 60 * 60 * ((10 :: Integer) ^ (9 :: Integer))

@@ -8,13 +8,13 @@ import PersonalWebsite.Internal
 import Relude hiding (Reader, ask, div, rem, (&), (**))
 
 serifFont :: Css
-serifFont = fontFamily ["Iosevka Etoile"] [serif]
+serifFont = fontFamily ["Iosevka Etoile Web"] [serif]
 
 sansSerifFont :: Css
-sansSerifFont = fontFamily ["Iosevka Aile"] [sansSerif]
+sansSerifFont = fontFamily ["Iosevka Aile Web"] [sansSerif]
 
 monospaceFont :: Css
-monospaceFont = fontFamily ["Iosevka"] [monospace]
+monospaceFont = fontFamily ["Iosevka Web"] [monospace]
 
 allLangs :: [Text]
 allLangs =
