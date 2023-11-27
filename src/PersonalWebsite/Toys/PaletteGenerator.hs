@@ -3,6 +3,7 @@
 module PersonalWebsite.Toys.PaletteGenerator (colorGeneratorPage) where
 
 import qualified Clay as C
+import qualified Clay.Stylesheet as C
 import Data.FileEmbed
 import Optics
 import PersonalWebsite.API
@@ -17,7 +18,6 @@ import Polysemy
 import qualified Polysemy.Input as P
 import Polysemy.Reader
 import Relude hiding (Reader, ask, div, local, span)
-import Skylighting
 import Text.Blaze.Html5
 import qualified Text.Blaze.Html5.Attributes as A
 
@@ -36,7 +36,7 @@ mkSample className = do
     pure do
         style
             . toMarkup
-            . C.render
+            . C.renderWith C.compact []
             $ fromString ("." <> className)
             C.? ".sample"
             C.& do
@@ -47,10 +47,9 @@ mkSample className = do
                 paddingRem 1 1 1 1
                 C.background bg'
         style
-            . toMarkup
-            $ scopeCSS ("." <> toText className)
-            $ toText
-            $ styleToCss sampleCodeStyle
+            $ toMarkup
+            $ C.renderWith C.compact [C.Root $ fromString $ "." <> className]
+            $ styleToClay sampleCodeStyle
         div ! A.class_ (fromString $ "sample " <> className) $ sampleBlog
         pass
 
@@ -130,7 +129,7 @@ colorGeneratorPage mSeed = do
                     " are all numbers. "
                     "Pick any number you want, world's your oyster!"
     pure $ div do
-        style . toMarkup $ C.render pageCSS
+        style . toMarkup $ C.renderWith C.compact [] pageCSS
         h1 "Current palette"
         currentPalette
         div ! A.class_ "try-title" $ do
@@ -173,7 +172,7 @@ mkPalette showSetPaletteButton = do
         $ div
         ! A.class_ "palette-block"
         $ do
-            style . toMarkup $ C.render paletteCSS
+            style . toMarkup $ C.renderWith C.compact [] paletteCSS
             div ! A.class_ "palette-title" $ do
                 h3 $ toMarkup blockName
                 when showSetPaletteButton (setSeedForm seed)

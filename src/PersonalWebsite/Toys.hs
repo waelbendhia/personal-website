@@ -57,7 +57,7 @@ mkToysStyle =
 mkToysPage :: (Member (Reader ColorSeed) r) => Sem r Html
 mkToysPage =
     mkToysStyle <&> \toysStyle -> do
-        style $ toMarkup $ C.render toysStyle
+        style $ toMarkup $ C.renderWith C.compact [] toysStyle
         p do
             "Toys are various little doodads that do things. "
             "Some of these might have blog posts going more in depth into how they work."

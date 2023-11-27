@@ -184,7 +184,7 @@ aboutPage :: (Members '[Input ParsedCV] r) => Maybe Text -> Sem r Html
 aboutPage selectedTag = do
     ParsedCV cv <- P.input
     pure do
-        style $ toMarkup $ C.render pageStyle
+        style $ toMarkup $ C.renderWith C.compact [] pageStyle
         (div ! A.class_ "about-body") do
             projectShowCase
             resumeOrCV selectedTag cv

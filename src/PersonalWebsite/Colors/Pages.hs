@@ -12,7 +12,6 @@ import Polysemy.Input
 import Polysemy.Reader
 import Relude hiding (runReader)
 import Servant
-import Skylighting
 import System.Random
 import Text.Blaze.Html5 hiding (input)
 import qualified Text.Blaze.Html5.Attributes as A
@@ -49,8 +48,15 @@ returnNewColorsOrThrow ref s = do
         st <- askCodeStyle
         varDeclarations <- declareVars <$> askColorPalette
         pure $ setCookieHeader s do
-            style ! A.id "var-declarations" $ toMarkup $ C.render varDeclarations
-            style ! A.id "code-style" $ toMarkup $ toText $ styleToCss st
+            style
+                ! A.id "var-declarations"
+                $ toMarkup
+                $ C.renderWith C.compact [] varDeclarations
+            style
+                ! A.id "code-style"
+                $ toMarkup
+                $ C.renderWith C.compact []
+                $ styleToClay st
             link
                 ! A.id "favicon-link"
                 ! A.rel "icon"

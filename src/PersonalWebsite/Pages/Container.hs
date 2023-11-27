@@ -22,7 +22,6 @@ import Polysemy
 import qualified Polysemy.Input as P
 import Polysemy.Reader
 import Relude hiding (Reader, ask, div, head, runReader, span, (**))
-import Skylighting
 import Text.Blaze
 import qualified Text.Blaze.Html4.FrameSet.Attributes as A
 import Text.Blaze.Html5
@@ -62,12 +61,19 @@ siteHead = do
             ! A.id "favicon-link"
             ! A.rel "icon"
             ! A.href ("favicon.ico?tag=" <> fromText (toText seed))
-        style ! A.id "var-declarations" $ toMarkup $ C.render varDeclarations
-        style ! A.id "code-style" $ toMarkup $ toText $ styleToCss st
+        style
+            ! A.id "var-declarations"
+            $ toMarkup
+            $ C.renderWith C.compact [] varDeclarations
+        style
+            ! A.id "code-style"
+            $ toMarkup
+            $ C.renderWith C.compact []
+            $ styleToClay st
         meta
             ! A.name "viewport"
             ! A.content "width=device-width, initial-scale=1"
-        style $ toMarkup $ C.render baseStyle
+        style $ toMarkup $ C.renderWith C.compact [] baseStyle
         link ! A.rel "stylesheet" ! A.href "/public/Iosevka.css"
         link ! A.rel "stylesheet" ! A.href "/public/IosevkaAile.css"
         link ! A.rel "stylesheet" ! A.href "/public/IosevkaEtoile.css"
